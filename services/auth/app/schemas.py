@@ -17,3 +17,16 @@ class OtpRequest(BaseModel):
 
 class MessageResponse(BaseModel):
     message: str
+
+from typing import Annotated
+
+from pydantic import StringConstraints
+
+
+class OtpVerify(OtpRequest):
+    code: Annotated[str, StringConstraints(pattern=r"^\d{6}$")]
+
+
+class VerifyResponse(BaseModel):
+    display_name: str
+    is_new_user: bool

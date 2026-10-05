@@ -1,5 +1,5 @@
 from app.config import settings
-from app.otp import generate_otp, hash_otp
+from app.otp import generate_otp, hash_otp, verify_otp
 from app.redis_client import redis
 from app.services.email import send_otp_email
 
@@ -32,3 +32,29 @@ async def request_otp(email: str) -> None:
         await pipe.execute()
 
     await send_otp_email(email, code)
+
+class InvalidCode(Exception):
+    pass
+
+
+async def verify_otp_code(email: str, code: str) -> None:
+    key = _code_key(email)
+
+    async with redis.pipeline(transaction=True) as pipe:
+        pipe.hincrby(key, "attempts", 1)
+        pipe.hget(key, "hash")
+        attempts, stored_hash = await pipe.execute()
+
+    if stored_hash is None:
+        await redis.delete(key)
+        raise InvalidCode
+
+    if attempts > settings.otp_max_attempts:
+        await redis.delete(key)
+        raise InvalidCode
+
+    if not verify_otp(email, code, stored_hash):
+        raise InvalidCode
+
+    if await redis.delete(key) == 0:
+        raise InvalidCode
