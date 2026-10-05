@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     otp_max_attempts: int = 5
     otp_requests_per_window: int = 3
     otp_window_seconds: int = 600
+
+    jwt_private_key_path: str = "../../secrets/jwt_private.pem"
+    jwt_public_key_path: str = "../../secrets/jwt_public.pem"
+    jwt_issuer: str = "auth-service"
+    access_token_ttl_seconds: int = 900
+    refresh_token_ttl_days: int = 30
+    
     @property
     def database_url(self) -> str:
         return (

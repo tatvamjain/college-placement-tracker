@@ -43,3 +43,22 @@ async def get_or_create_verified_user(session: AsyncSession, email: str) -> tupl
 
 def is_banned(user: User) -> bool:
     return user.banned_until is not None and user.banned_until > datetime.now(timezone.utc)
+
+from datetime import timedelta
+
+from app.config import settings
+from app.models import RefreshToken
+from app.tokens import create_access_token, new_refresh_token
+
+
+def issue_tokens(session: AsyncSession, user: User, device_info: str) -> tuple[str, str]:
+    raw_refresh, refresh_hash = new_refresh_token()
+    session.add(
+        RefreshToken(
+            user_id=user.id,
+            token_hash=refresh_hash,
+            device_info=device_info[:255] or None,
+            expires_at=datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_ttl_days),
+        )
+    )
+    return create_access_token(user), raw_refresh
