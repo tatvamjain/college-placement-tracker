@@ -1,0 +1,7 @@
+The security decisions
+secrets, not random. Python's random is predictable: it's designed for simulations, and with enough outputs its future values can be calculated. secrets uses the operating system's cryptographic randomness.
+Store an HMAC, not the code. If Redis ever leaked, plain codes would let an attacker log in as anyone with a pending code. But a plain SHA-256 of a 6-digit code doesn't help: there are only a million possible codes, so an attacker hashes all of them in under a second and looks up the match. HMAC mixes in a secret key only our server knows, so without the key that precomputation is useless.
+Expiry (TTL): codes self-destruct after 5 minutes. Redis handles it, so no cleanup job is needed.
+Rate limiting: at most 3 code requests per email per 10 minutes. Without it, someone could flood a student's inbox ("email bombing"), or burn through our email provider's free quota. Too many requests gets 429 Too Many Requests.
+Same response whether or not the account exists, which prevents user enumeration (from Module 4).
+Never log codes in production. In development we print the code to the console instead of emailing it; in production that would leak every code into the logs, so the code refuses to do it.
