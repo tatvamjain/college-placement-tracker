@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     db_host: str = "localhost"
     db_port: int = 5433
     db_name: str = "auth_db"
-
+    allowed_email_domain: str = "thapar.edu"
     @property
     def database_url(self) -> str:
         return (

@@ -1,10 +1,11 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
-
+from app.routers import auth
 from app.db import engine
 
 app=FastAPI(title="Auth Service", version="0.1.0")
+app.include_router(auth.router)
 
 @app.get("/health/live")
 async def live()-> dict[str,str]:
