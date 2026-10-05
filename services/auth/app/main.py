@@ -19,3 +19,4 @@ async def ready() -> JSONResponse:
     except Exception:
         return JSONResponse(status_code=503, content={"status": "unavailable"})
     return JSONResponse(status_code=200, content={"status": "ready"})
+
