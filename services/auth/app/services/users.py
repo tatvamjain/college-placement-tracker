@@ -9,7 +9,9 @@ from app.models import AuthOutbox, Pseudonym, User
 from app.pseudonyms import unique_display_name
 
 
-async def get_or_create_verified_user(session: AsyncSession, email: str) -> tuple[User, bool]:
+async def get_or_create_verified_user(
+    session: AsyncSession, email: str
+) -> tuple[User, bool]:
     now = datetime.now(timezone.utc)
 
     user = await session.scalar(
@@ -34,7 +36,10 @@ async def get_or_create_verified_user(session: AsyncSession, email: str) -> tupl
                 "version": 1,
                 "occurred_at": now.isoformat(),
                 "producer": "auth-service",
-                "data": {"user_id": str(user.id), "pseudo_id": str(pseudonym.pseudo_id)},
+                "data": {
+                    "user_id": str(user.id),
+                    "pseudo_id": str(pseudonym.pseudo_id),
+                },
             },
         )
     )
@@ -42,7 +47,10 @@ async def get_or_create_verified_user(session: AsyncSession, email: str) -> tupl
 
 
 def is_banned(user: User) -> bool:
-    return user.banned_until is not None and user.banned_until > datetime.now(timezone.utc)
+    return user.banned_until is not None and user.banned_until > datetime.now(
+        timezone.utc
+    )
+
 
 from datetime import timedelta
 
@@ -51,14 +59,17 @@ from app.models import RefreshToken
 from app.tokens import create_access_token, new_refresh_token
 
 
-def issue_tokens(session: AsyncSession, user: User, device_info: str) -> tuple[str, str]:
+def issue_tokens(
+    session: AsyncSession, user: User, device_info: str
+) -> tuple[str, str]:
     raw_refresh, refresh_hash = new_refresh_token()
     session.add(
         RefreshToken(
             user_id=user.id,
             token_hash=refresh_hash,
             device_info=device_info[:255] or None,
-            expires_at=datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_ttl_days),
+            expires_at=datetime.now(timezone.utc)
+            + timedelta(days=settings.refresh_token_ttl_days),
         )
     )
     return create_access_token(user), raw_refresh

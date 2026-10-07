@@ -4,7 +4,7 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from app.models import UserRole
 from app.db import SessionLocal
 from app.tokens import decode_access_token
 
@@ -35,3 +35,14 @@ async def get_current_claims(
         raise _unauthorized("Token expired")
     except jwt.InvalidTokenError:
         raise _unauthorized("Invalid token")
+
+
+def require_role(*roles: UserRole):
+    allowed = {r.value for r in roles}
+
+    async def checker(claims: dict = Depends(get_current_claims)) -> dict:
+        if claims["role"] not in allowed:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Insufficient permissions")
+        return claims
+
+    return checker

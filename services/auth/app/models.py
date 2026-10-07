@@ -31,10 +31,12 @@ class User(Base):
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(CITEXT, unique=True)
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, name="user_role", values_callable=lambda e: [m.value for m in e]),
+        Enum(
+            UserRole, name="user_role", values_callable=lambda e: [m.value for m in e]
+        ),
         default=UserRole.student,
         server_default=UserRole.student.value,
-        #default= vs server_default=; so in default the default value is set by python code when you create an object
+        # default= vs server_default=; so in default the default value is set by python code when you create an object
         # and in server_default the default value is set by the database when you insert a row without specifying a value for that column
     )
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -53,7 +55,7 @@ class AuthOutbox(Base):
             "ix_auth_outbox_unpublished",
             "created_at",
             postgresql_where=text("published_at IS NULL"),
-        ),#here we are creating a partial index on created_at column where published_at is null, so that we can quickly query for unpublished events
+        ),  # here we are creating a partial index on created_at column where published_at is null, so that we can quickly query for unpublished events
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
@@ -64,22 +66,36 @@ class AuthOutbox(Base):
     )
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
+
 class Pseudonym(Base):
-    __tablename__= "pseudonyms"
+    __tablename__ = "pseudonyms"
 
     pseudo_id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id",ondelete="CASCADE"),unique=True)
-    display_name: Mapped[str]=mapped_column(String(40), unique=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    user: Mapped["User"]=relationship(back_populates="pseudonym")
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), unique=True
+    )
+    display_name: Mapped[str] = mapped_column(String(40), unique=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    user: Mapped["User"] = relationship(back_populates="pseudonym")
+
 
 class RefreshToken(Base):
-    __tablename__="refresh_tokens"
+    __tablename__ = "refresh_tokens"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id",ondelete="CASCADE"), index=True)
-    token_hash: Mapped[str]=mapped_column(String(64), unique=True, nullable=False)
-    device_info:Mapped[str]=mapped_column(String(255), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),nullable=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    device_info: Mapped[str] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    revoked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )

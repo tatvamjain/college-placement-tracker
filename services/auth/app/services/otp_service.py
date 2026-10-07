@@ -27,11 +27,14 @@ async def request_otp(email: str) -> None:
 
     code = generate_otp()
     async with redis.pipeline(transaction=True) as pipe:
-        pipe.hset(_code_key(email), mapping={"hash": hash_otp(email, code), "attempts": 0})
+        pipe.hset(
+            _code_key(email), mapping={"hash": hash_otp(email, code), "attempts": 0}
+        )
         pipe.expire(_code_key(email), settings.otp_ttl_seconds)
         await pipe.execute()
 
     await send_otp_email(email, code)
+
 
 class InvalidCode(Exception):
     pass

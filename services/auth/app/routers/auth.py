@@ -39,7 +39,9 @@ async def verify_otp(
     async with session.begin():
         user, created = await users.get_or_create_verified_user(session, body.email)
         if users.is_banned(user):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended"
+            )
         access, refresh = users.issue_tokens(
             session, user, request.headers.get("user-agent", "")
         )
@@ -55,7 +57,11 @@ async def verify_otp(
 
 @router.get("/me")
 async def me(claims: dict = Depends(get_current_claims)) -> dict:
-    return {"user_id": claims["sub"], "pseudo_id": claims["pid"], "role": claims["role"]}
+    return {
+        "user_id": claims["sub"],
+        "pseudo_id": claims["pid"],
+        "role": claims["role"],
+    }
 
 
 from fastapi import Depends, Response
@@ -73,13 +79,17 @@ async def refresh(
     try:
         access, new_refresh = await refresh_service.rotate(session, body.refresh_token)
     except refresh_service.InvalidRefreshToken:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired refresh token")
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED, "Invalid or expired refresh token"
+        )
     except refresh_service.UserBanned:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Account suspended")
     return RefreshResponse(access_token=access, refresh_token=new_refresh)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-async def logout(body: RefreshRequest, session: AsyncSession = Depends(get_session)) -> Response:
+async def logout(
+    body: RefreshRequest, session: AsyncSession = Depends(get_session)
+) -> Response:
     await refresh_service.revoke(session, body.refresh_token)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

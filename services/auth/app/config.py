@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     jwt_issuer: str = "auth-service"
     access_token_ttl_seconds: int = 900
     refresh_token_ttl_days: int = 30
-    
+
     @property
     def database_url(self) -> str:
         return (
