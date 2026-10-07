@@ -34,3 +34,12 @@ class TokenResponse(BaseModel):
     expires_in: int
     display_name: str
     is_new_user: bool
+
+class RefreshRequest(BaseModel):
+    refresh_token: Annotated[str, StringConstraints(min_length=20, max_length=200)]
+
+
+class RefreshResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
