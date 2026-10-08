@@ -88,6 +88,7 @@ class RoleIn(BaseModel):
     ctc_inr: int | None = Field(default=None, ge=0)
     stipend_inr: int | None = Field(default=None, ge=0)
     location: str | None = Field(default=None, max_length=100)
+    selected_count: int = Field(default=0, ge=0)
 
 
 class RoundIn(BaseModel):
@@ -101,6 +102,7 @@ class DriveIn(BaseModel):
     visit_date: date | None = None
     roles: list[RoleIn] = Field(min_length=1)
     rounds: list[RoundIn] = []
+    status: DriveStatus = DriveStatus.announced
 
 
 class DrivePatch(BaseModel):

@@ -17,7 +17,7 @@ from app.models import (
     Season,
 )
 from app.schemas import CompanyIn, DriveIn, DrivePatch, UpdateIn, RolePatch
-
+from app.models import SeasonStatus
 
 class NotFound(Exception):
     pass
@@ -84,6 +84,7 @@ async def create_drive(session: AsyncSession, actor_id: uuid.UUID, data: DriveIn
     drive = Drive(
         season_id=season.id,
         company_id=data.company_id,
+        status=data.status,
         visit_date=data.visit_date,
         created_by=actor_id,
         roles=[DriveRole(**r.model_dump()) for r in data.roles],
@@ -96,7 +97,7 @@ async def create_drive(session: AsyncSession, actor_id: uuid.UUID, data: DriveIn
     await session.flush()
     _record(
         session, actor_id, "create", "drive", drive.id,
-        data.model_dump(mode="json"), event_type="DriveCreated",
+        data.model_dump(mode="json"), event_type="DriveCreated" if season.status == SeasonStatus.active else None,
     )
     await session.commit()
     await cache.delete(cache.stats_key(season.label))

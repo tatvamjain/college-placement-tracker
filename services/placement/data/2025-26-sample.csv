@@ -1,0 +1,7 @@
+company,sector,visit_date,status,role_title,job_type,ctc_inr,stipend_inr,location,selected_count
+Amazon,Tech,2025-08-12,completed,SDE 1,fte,4400000,,Bengaluru,6
+Amazon,Tech,2025-08-12,completed,SDE Intern,intern,,110000,Hyderabad,10
+Infosys,IT Services,2025-09-15,completed,Systems Engineer,fte,360000,,Mysuru,42
+Deloitte,Consulting,2025-10-03,completed,Analyst,fte,750000,,Gurugram,15
+ZS Associates,Consulting,2025-11-20,completed,Business Analyst,fte,1050000,,Pune,8
+Atlassian,Tech,2025-12-05,cancelled,Software Engineer,fte,5600000,,Bengaluru,0
