@@ -1,0 +1,113 @@
+x-python: &python
+  env_file: .env
+  restart: unless-stopped
+
+x-auth-env: &auth-env
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  JWT_PRIVATE_KEY_PATH: /secrets/jwt_private.pem
+  JWT_PUBLIC_KEY_PATH: /secrets/jwt_public.pem
+
+x-placement-env: &placement-env
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  JWT_PUBLIC_KEY_PATH: /secrets/jwt_public.pem
+
+services:
+  postgres:
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost"]
+      interval: 3s
+      retries: 20
+
+  auth-migrate:
+    <<: *python
+    build: ./services/auth
+    command: ["alembic", "upgrade", "head"]
+    environment: *auth-env
+    restart: "no"
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  auth:
+    <<: *python
+    build: ./services/auth
+    environment: *auth-env
+    volumes: ["./secrets:/secrets:ro"]
+    depends_on:
+      auth-migrate: { condition: service_completed_successfully }
+      redis: { condition: service_started }
+
+  auth-relay:
+    <<: *python
+    build: ./services/auth
+    command: ["python", "-m", "app.relay"]
+    environment: *auth-env
+    volumes: ["./secrets:/secrets:ro"]
+    depends_on:
+      auth-migrate: { condition: service_completed_successfully }
+
+  placement-migrate:
+    <<: *python
+    build: ./services/placement
+    command: ["alembic", "upgrade", "head"]
+    environment: *placement-env
+    restart: "no"
+    volumes: ["./secrets/jwt_public.pem:/secrets/jwt_public.pem:ro"]
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  placement:
+    <<: *python
+    build: ./services/placement
+    environment: *placement-env
+    volumes: ["./secrets/jwt_public.pem:/secrets/jwt_public.pem:ro"]
+    depends_on:
+      placement-migrate: { condition: service_completed_successfully }
+      redis: { condition: service_started }
+
+  placement-relay:
+    <<: *python
+    build: ./services/placement
+    command: ["python", "-m", "app.relay"]
+    environment: *placement-env
+    volumes: ["./secrets/jwt_public.pem:/secrets/jwt_public.pem:ro"]
+    depends_on:
+      placement-migrate: { condition: service_completed_successfully }
+
+  notifier:
+    <<: *python
+    build: ./services/notifier
+    command: ["python", "-m", "app.worker"]
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      PLACEMENT_URL: http://placement:8000
+    depends_on: [redis, placement]
+
+  web:
+    build: ./services/web
+    restart: unless-stopped
+    environment:
+      PLACEMENT_API_URL: http://placement:8000
+    depends_on: [placement]
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-http://localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web, auth, placement]
+
+volumes:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,13 @@
+{$SITE_ADDRESS:http://localhost} {
+	encode zstd gzip
+
+	handle_path /api/auth/* {
+		reverse_proxy auth:8000
+	}
+	handle_path /api/placement/* {
+		reverse_proxy placement:8000
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+}
