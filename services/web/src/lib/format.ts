@@ -48,7 +48,7 @@ export const DRIVE_BOARD_STATUS: Record<DriveStatus, { label: string; hint: stri
   announced: { label: "UPCOMING", hint: "Drive announced, rounds not started" },
   ongoing: { label: "ONGOING", hint: "Rounds in progress" },
   completed: { label: "RESULTS OUT", hint: "Process finished, results out" },
-  cancelled: { label: "CANCELLED", hint: "Company called it off" },
+  cancelled: { label: "ON HOLD", hint: "Process paused for now" },
 };
 
 export const ROUND_BOARD_STATUS: Record<RoundStatus, string> = {

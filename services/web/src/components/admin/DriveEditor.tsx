@@ -57,7 +57,7 @@ const DRIVE_TONES: Record<DriveStatus, string> = {
   announced: "tone-sky",
   ongoing: "tone-amber",
   completed: "tone-green",
-  cancelled: "tone-red",
+  cancelled: "tone-grey",
 };
 const ROUND_TONES: Record<RoundStatus, string> = {
   scheduled: "tone-sky",
@@ -138,13 +138,7 @@ function RoleRow({ role, run }: { role: Role; run: Run }) {
       </div>
       <label className="ed-mini ed-placed">
         <span>PLACED</span>
-        <input
-          type="number"
-          min={0}
-          inputMode="numeric"
-          value={count}
-          onChange={(e) => setCount(e.target.value)}
-        />
+        <input type="number" min={0} inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} />
       </label>
       <button
         className="btn btn-small"
@@ -159,14 +153,62 @@ function RoleRow({ role, run }: { role: Role; run: Run }) {
   );
 }
 
+function DeleteDrive({ drive, notify, onDeleted }: { drive: DriveDetail; notify: Notify; onDeleted: () => void }) {
+  const [asking, setAsking] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  async function remove() {
+    setBusy(true);
+    try {
+      await admin.deleteDrive(drive.id);
+      notify("ok", `${drive.company.name} drive deleted`);
+      onDeleted();
+    } catch (err) {
+      notify("error", err);
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="ed-card ed-danger">
+      <h3 className="ed-title">Delete drive</h3>
+      {asking ? (
+        <>
+          <p className="ed-help">
+            This removes the {drive.company.name} drive with all its roles, rounds, results and announcements. It
+            can&apos;t be undone. To pause a drive instead, set its status to On hold.
+          </p>
+          <div className="ed-inline">
+            <button className="btn btn-small btn-danger" disabled={busy} onClick={remove}>
+              {busy ? "DELETING…" : "YES, DELETE IT"}
+            </button>
+            <button className="btn btn-small" disabled={busy} onClick={() => setAsking(false)}>
+              KEEP IT
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="ed-inline ed-between">
+          <span className="ed-help">Added by mistake? Remove it from the site completely.</span>
+          <button className="btn btn-small btn-danger" onClick={() => setAsking(true)}>
+            DELETE DRIVE
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function DriveEditor({
   id,
   notify,
   onChanged,
+  onDeleted,
 }: {
   id: number;
   notify: Notify;
   onChanged: () => void;
+  onDeleted: () => void;
 }) {
   const [drive, setDrive] = useState<DriveDetail | null>(null);
   const [version, setVersion] = useState(0);
@@ -251,9 +293,7 @@ export function DriveEditor({
           <button
             className="btn btn-small"
             disabled={!visitDirty || busy}
-            onClick={() =>
-              run("Visit date saved", () => admin.patchDrive(drive.id, { visit_date: visit || null }))
-            }
+            onClick={() => run("Visit date saved", () => admin.patchDrive(drive.id, { visit_date: visit || null }))}
           >
             SAVE
           </button>
@@ -317,6 +357,8 @@ export function DriveEditor({
           </ol>
         )}
       </section>
+
+      <DeleteDrive drive={drive} notify={notify} onDeleted={onDeleted} />
     </div>
   );
 }

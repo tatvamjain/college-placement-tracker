@@ -25,8 +25,7 @@ function resultsLine(d: DriveDetail): string {
 // Announcements and results from every drive in the season, newest first.
 // Drive details are cached for 30 s each (see api.ts), so this is cheap after the first visit.
 export async function seasonHeadlines(season: SeasonDrives, limit = 6): Promise<Headline[]> {
-  const live = season.drives.filter((d) => d.status !== "cancelled");
-  const details = await Promise.all(live.map((d) => api.drive(String(d.id)).catch(() => null)));
+  const details = await Promise.all(season.drives.map((d) => api.drive(String(d.id)).catch(() => null)));
 
   const items: Headline[] = [];
   for (const d of details) {

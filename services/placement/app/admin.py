@@ -178,3 +178,23 @@ async def patch_round(
         setattr(rnd, field, new)
     _record(session, actor_id, "update", "round", rnd.id, changes)
     await session.commit()
+from sqlalchemy import delete, select
+from sqlalchemy.orm import selectinload
+async def delete_drive(session: AsyncSession, actor_id: uuid.UUID, drive_id: int) -> None:
+    drive = await session.scalar(
+        select(Drive)
+        .options(selectinload(Drive.company), selectinload(Drive.season))
+        .where(Drive.id == drive_id)
+    )
+    if drive is None:
+        raise NotFound("Drive not found")
+    snapshot = {
+        "company": drive.company.name,
+        "season": drive.season.label,
+        "status": jsonable_encoder(drive.status),
+        "visit_date": jsonable_encoder(drive.visit_date),
+    }
+    session.expunge(drive)
+    await session.execute(delete(Drive).where(Drive.id == drive_id))
+    _record(session, actor_id, "delete", "drive", drive_id, snapshot)
+    await session.commit()

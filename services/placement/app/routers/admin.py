@@ -84,3 +84,11 @@ async def patch_round(
 ):
     await admin_service.patch_round(session, admin.user_id, drive_id, round_order, body)
     return await _fresh_drive(session, drive_id)
+
+@router.delete("/drives/{drive_id}", status_code=204)
+async def delete_drive(
+    drive_id: int,
+    admin: Admin = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    await admin_service.delete_drive(session, admin.user_id, drive_id)

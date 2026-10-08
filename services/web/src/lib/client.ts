@@ -115,6 +115,7 @@ export const admin = {
   ) => request<unknown>(`${PLACEMENT}/admin/drives/${driveId}/rounds/${order}`, json("PATCH", body)),
   patchRole: (id: number, body: { selected_count: number }) =>
     request<unknown>(`${PLACEMENT}/admin/roles/${id}`, json("PATCH", body)),
+  deleteDrive: (id: number) => request<void>(`${PLACEMENT}/admin/drives/${id}`, { method: "DELETE" }),
   postUpdate: (driveId: number, message: string) =>
     request<unknown>(`${PLACEMENT}/admin/drives/${driveId}/updates`, json("POST", { message })),
 };

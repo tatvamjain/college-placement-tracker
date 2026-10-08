@@ -109,7 +109,7 @@ export function ControlTower() {
         <div>
           <p className="kicker">
             <span className="live-dot" aria-hidden />
-            Admin panel{season ? ` · season ${season.season.label}` : ""}
+            Placement cell{season ? ` · season ${season.season.label}` : ""}
           </p>
           <h1 className="today-title">
             Admin <span>panel</span>
@@ -175,7 +175,16 @@ export function ControlTower() {
               />
             )}
             {typeof selected === "number" && (
-              <DriveEditor key={selected} id={selected} notify={notify} onChanged={reload} />
+              <DriveEditor
+                key={selected}
+                id={selected}
+                notify={notify}
+                onChanged={reload}
+                onDeleted={async () => {
+                  setSelected(null);
+                  await reload();
+                }}
+              />
             )}
           </div>
         </div>

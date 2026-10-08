@@ -10,13 +10,14 @@ import { selectedCount, topCtc } from "@/lib/offers";
 import { Flaps } from "./Flaps";
 import { DriveStatusTag } from "./StatusTag";
 
-type Filter = "all" | "fte" | "intern" | "boarding" | "upcoming" | "departed";
+type Filter = "all" | "fte" | "intern" | "ongoing" | "upcoming" | "results" | "hold";
 
 const FILTERS: { id: Filter; label: string; test: (d: DriveSummary) => boolean }[] = [
   { id: "all", label: "All", test: () => true },
-  { id: "boarding", label: "Ongoing", test: (d) => d.status === "ongoing" },
+  { id: "ongoing", label: "Ongoing", test: (d) => d.status === "ongoing" },
   { id: "upcoming", label: "Upcoming", test: (d) => d.status === "announced" },
-  { id: "departed", label: "Results out", test: (d) => d.status === "completed" },
+  { id: "results", label: "Results out", test: (d) => d.status === "completed" },
+  { id: "hold", label: "On hold", test: (d) => d.status === "cancelled" },
   { id: "fte", label: "Full-time", test: (d) => d.roles.some((r) => r.job_type !== "intern") },
   { id: "intern", label: "Internships", test: (d) => d.roles.some((r) => r.job_type !== "fte") },
 ];
@@ -65,7 +66,7 @@ export function DepartureBoard({ drives }: { drives: DriveSummary[] }) {
             {FILTERS.filter((f) => f.id === "all" || counts[f.id] > 0).map((f) => (
               <button
                 key={f.id}
-                className={`chip${filter === f.id ? " is-on" : ""}${f.id === "boarding" ? " chip-live" : ""}`}
+                className={`chip${filter === f.id ? " is-on" : ""}${f.id === "ongoing" ? " chip-live" : ""}`}
                 aria-pressed={filter === f.id}
                 onClick={() => setFilter(f.id)}
               >

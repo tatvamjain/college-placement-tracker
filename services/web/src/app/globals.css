@@ -1,4 +1,84 @@
-@import "tailwindcss";
+/* Plain CSS: no Tailwind build step needed. This small reset is all the site relies on. */
+*,
+::before,
+::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0 solid;
+}
+
+html {
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  tab-size: 4;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+ol,
+ul,
+menu {
+  list-style: none;
+}
+
+img,
+svg,
+video,
+canvas {
+  display: block;
+  vertical-align: middle;
+}
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+b,
+strong {
+  font-weight: bolder;
+}
+
+small {
+  font-size: 80%;
+}
+
+button,
+input,
+select,
+optgroup,
+textarea {
+  font: inherit;
+  font-feature-settings: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  background-color: transparent;
+  border-radius: 0;
+  opacity: 1;
+}
+
+::placeholder {
+  opacity: 1;
+  color: color-mix(in oklab, currentcolor 50%, transparent);
+}
+
+textarea {
+  resize: vertical;
+}
+
+[hidden]:where(:not([hidden="until-found"])) {
+  display: none !important;
+}
 
 /* ------------------------------------------------------------------
    Placement Board — an airport departures board for campus placements
@@ -29,19 +109,6 @@
   --paper-line: #d9d3c5;
 }
 
-@theme inline {
-  --color-ink: var(--ink);
-  --color-panel: var(--panel);
-  --color-line: var(--line);
-  --color-text: var(--text);
-  --color-muted: var(--muted);
-  --color-amber: var(--amber);
-  --color-green: var(--green);
-  --color-sky: var(--sky);
-  --color-red: var(--red);
-  --font-sans: var(--font-display);
-  --font-mono: var(--font-board);
-}
 
 html {
   color-scheme: dark;
@@ -319,9 +386,8 @@ a {
 }
 
 .tag-cancelled {
-  color: var(--red);
-  background: var(--red-soft);
-  text-decoration: line-through;
+  color: var(--muted);
+  background: rgba(139, 145, 155, 0.14);
 }
 
 @keyframes pulse {
@@ -623,7 +689,7 @@ a.board-row:hover .go {
 
 .board-row.is-cancelled .company,
 .board-row.is-cancelled .ctc {
-  opacity: 0.45;
+  opacity: 0.6;
 }
 
 .board-empty {
@@ -842,8 +908,8 @@ a.board-row:hover .go {
   background: rgba(19, 132, 79, 0.13);
 }
 .pass .tag-cancelled {
-  color: #c9282d;
-  background: rgba(201, 40, 45, 0.12);
+  color: var(--paper-muted);
+  background: rgba(107, 106, 102, 0.14);
 }
 
 .fares {
@@ -1891,6 +1957,11 @@ a.session-link:hover {
   background: var(--green-soft);
 }
 
+.seg-opt.is-on.tone-grey {
+  color: var(--text);
+  background: rgba(139, 145, 155, 0.18);
+}
+
 .seg-opt.is-on.tone-red {
   color: var(--red);
   background: var(--red-soft);
@@ -2905,4 +2976,44 @@ a.session-link:hover {
   .dist {
     padding: 16px 14px;
   }
+}
+
+/* ---------- utilities (kept here so they don't depend on the Tailwind build step) ---------- */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.antialiased {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---------- delete drive ---------- */
+
+.ed-danger {
+  border-color: rgba(255, 90, 95, 0.28);
+}
+
+.ed-danger .ed-title {
+  color: var(--red);
+}
+
+.btn-danger {
+  color: var(--red);
+  border-color: rgba(255, 90, 95, 0.45);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--red);
+  border-color: var(--red);
+  color: var(--ink);
 }

@@ -13,7 +13,7 @@ const TONE: Record<DriveStatus, string> = {
   announced: C.sky,
   ongoing: C.amber,
   completed: "#1f9d68",
-  cancelled: C.red,
+  cancelled: C.muted,
 };
 
 export default async function Image({ params }: { params: Promise<{ id: string }> }) {

@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import { formatDay, formatLPA, formatStipend } from "@/lib/format";
+import { DRIVE_BOARD_STATUS, formatDay, formatLPA, formatStipend } from "@/lib/format";
 
 type Item = { key: string; company: string; detail: string; amount: string; tail: string };
 
@@ -9,7 +9,6 @@ async function tickerItems(): Promise<Item[]> {
     if (!current) return [];
     const items: Item[] = [];
     for (const drive of current.drives) {
-      if (drive.status === "cancelled") continue;
       const placed = drive.roles.filter((r) => r.selected_count > 0);
       if (placed.length > 0) {
         for (const role of placed) {
@@ -26,7 +25,7 @@ async function tickerItems(): Promise<Item[]> {
           key: `d${drive.id}`,
           company: drive.company.name,
           detail: drive.visit_date ? formatDay(drive.visit_date) : "DATE TBA",
-          amount: drive.status === "ongoing" ? "ONGOING" : "UPCOMING",
+          amount: DRIVE_BOARD_STATUS[drive.status].label,
           tail: "",
         });
       }
