@@ -44,17 +44,16 @@ export function formatTimestamp(iso: string): string {
     .toUpperCase();
 }
 
-// The board speaks "airport": a drive is a flight leaving with our students on it.
 export const DRIVE_BOARD_STATUS: Record<DriveStatus, { label: string; hint: string }> = {
-  announced: { label: "SCHEDULED", hint: "Drive announced, rounds not started" },
-  ongoing: { label: "BOARDING", hint: "Rounds in progress" },
-  completed: { label: "DEPARTED", hint: "Process finished, results out" },
+  announced: { label: "UPCOMING", hint: "Drive announced, rounds not started" },
+  ongoing: { label: "ONGOING", hint: "Rounds in progress" },
+  completed: { label: "RESULTS OUT", hint: "Process finished, results out" },
   cancelled: { label: "CANCELLED", hint: "Company called it off" },
 };
 
 export const ROUND_BOARD_STATUS: Record<RoundStatus, string> = {
   scheduled: "SCHEDULED",
-  ongoing: "BOARDING",
+  ongoing: "ONGOING",
   completed: "DONE",
 };
 

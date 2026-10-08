@@ -87,15 +87,15 @@ export function ControlTower() {
   if (gate === "out" || gate === "denied") {
     return (
       <section className="notice">
-        <Flaps text={gate === "out" ? "CREW ONLY" : "RESTRICTED"} />
-        <h1>{gate === "out" ? "Check in first" : "Admins only"}</h1>
+        <Flaps text={gate === "out" ? "ADMINS ONLY" : "NO ACCESS"} />
+        <h1>{gate === "out" ? "Sign in first" : "Admins only"}</h1>
         <p>
           {gate === "out"
-            ? "The control tower is for the placement cell. Sign in with your Thapar email."
+            ? "The admin panel is for the placement cell. Sign in with your Thapar email."
             : "Your account can see the board but can't change it. Ask the placement cell if you should have access."}
         </p>
         <Link href={gate === "out" ? "/login" : "/"} className="btn">
-          {gate === "out" ? "GO TO CHECK-IN →" : "← BACK TO THE LIVE BOARD"}
+          {gate === "out" ? "SIGN IN →" : "← BACK TO PLACEMENTS"}
         </Link>
       </section>
     );
@@ -109,10 +109,10 @@ export function ControlTower() {
         <div>
           <p className="kicker">
             <span className="live-dot" aria-hidden />
-            Control tower{season ? ` · season ${season.season.label}` : ""}
+            Admin panel{season ? ` · season ${season.season.label}` : ""}
           </p>
           <h1 className="today-title">
-            The <span>tower</span>
+            Admin <span>panel</span>
           </h1>
         </div>
         <div className="tower-actions">

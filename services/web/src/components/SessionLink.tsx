@@ -16,7 +16,7 @@ function roleFromToken(token: string): string | null {
 export function CheckInLink() {
   return (
     <Link href="/login" className="session-link">
-      CHECK-IN
+      SIGN IN
     </Link>
   );
 }
@@ -28,12 +28,12 @@ export async function SessionLink() {
   if (role === "admin") {
     return (
       <Link href="/admin" className="session-link is-crew">
-        TOWER
+        ADMIN
       </Link>
     );
   }
   if (role) {
-    return <span className="session-link is-in">CHECKED IN</span>;
+    return <span className="session-link is-in">SIGNED IN</span>;
   }
   return <CheckInLink />;
 }

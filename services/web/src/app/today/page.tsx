@@ -18,10 +18,10 @@ async function TodayBoard() {
       <section className="today-hero">
         <p className="kicker">
           {live > 0 && <span className="live-dot" aria-hidden />}
-          {live > 0 ? `${live} boarding now` : "Today's schedule"}
+          {live > 0 ? `${live} ongoing now` : "Today's schedule"}
         </p>
         <h1 className="today-title">
-          Today&apos;s <span>departures</span>
+          Today&apos;s <span>rounds</span>
         </h1>
         {today && <p className="today-date">{formatLongDay(today.day)}</p>}
       </section>
@@ -29,15 +29,15 @@ async function TodayBoard() {
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="board today-board">
           <div className="board-head" aria-hidden>
-            <span>GATE</span>
-            <span>COMPANY</span>
             <span>ROUND</span>
+            <span>COMPANY</span>
+            <span>STAGE</span>
             <span>STATUS</span>
           </div>
           {rounds.length === 0 ? (
             <div className="board-empty">
-              <Flaps text="NO DEPARTURES TODAY" />
-              <p className="board-note">No rounds are scheduled for today. Check the live board for what&apos;s next.</p>
+              <Flaps text="NO ROUNDS TODAY" />
+              <p className="board-note">No rounds are scheduled for today. Check the home page for what&apos;s next.</p>
             </div>
           ) : (
             rounds.map((round, row) => (

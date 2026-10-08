@@ -26,7 +26,7 @@ async function tickerItems(): Promise<Item[]> {
           key: `d${drive.id}`,
           company: drive.company.name,
           detail: drive.visit_date ? formatDay(drive.visit_date) : "DATE TBA",
-          amount: drive.status === "ongoing" ? "BOARDING NOW" : "SCHEDULED",
+          amount: drive.status === "ongoing" ? "ONGOING" : "UPCOMING",
           tail: "",
         });
       }

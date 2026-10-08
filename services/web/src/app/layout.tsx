@@ -17,7 +17,13 @@ const board = JetBrains_Mono({
   subsets: ["latin"],
 });
 
+// Link previews need absolute image URLs. SITE_URL is passed in at build time (see the Dockerfile).
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3000"),
+  applicationName: "Placement Board",
+  appleWebApp: { title: "Placements", statusBarStyle: "black-translucent" },
+  openGraph: { siteName: "Placement Board", type: "website" },
+  twitter: { card: "summary_large_image" },
   title: {
     default: "Placement Board",
     template: "%s · Placement Board",

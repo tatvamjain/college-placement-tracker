@@ -113,7 +113,7 @@ export function CheckIn() {
   return (
     <div className="desk">
       <ol className="desk-steps" aria-label="Check-in progress">
-        {["Email", "Code", "Boarded"].map((label, i) => (
+        {["Email", "Code", "Done"].map((label, i) => (
           <li key={label} className={i < stepIndex ? "is-done" : i === stepIndex ? "is-now" : ""}>
             <span className="desk-step-no">{String(i + 1).padStart(2, "0")}</span>
             {label}
@@ -191,14 +191,14 @@ export function CheckIn() {
 
       {step === "boarded" && (
         <div className="desk-body desk-done">
-          <Flaps text="BOARDED" />
-          <p className="desk-hint">You&apos;re checked in. Taking you on board…</p>
+          <Flaps text="SIGNED IN" />
+          <p className="desk-hint">You&apos;re signed in. Taking you there…</p>
         </div>
       )}
 
       <p className="desk-foot">
         The board is public, you don&apos;t need to sign in to see placements.{" "}
-        <Link href="/">Back to the live board</Link>
+        <Link href="/">Back to placements</Link>
       </p>
     </div>
   );

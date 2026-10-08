@@ -1,16 +1,31 @@
 import type { DriveSummary } from "./api";
 
-// One entry per student placed in a full-time role, matching how the API computes stats.
-export function fteOffers(drives: DriveSummary[]): number[] {
-  const offers: number[] = [];
+// One group per full-time role with results, matching how the API computes stats.
+// `count` students got `ctc_inr`; the chart draws one dot per student.
+export type OfferGroup = {
+  ctc_inr: number;
+  count: number;
+  company: string;
+  role: string;
+  driveId: number;
+};
+
+export function fteOffers(drives: DriveSummary[]): OfferGroup[] {
+  const groups: OfferGroup[] = [];
   for (const drive of drives) {
     if (drive.status === "cancelled") continue;
     for (const role of drive.roles) {
-      if (role.job_type !== "fte" || role.ctc_inr === null) continue;
-      for (let i = 0; i < role.selected_count; i++) offers.push(role.ctc_inr);
+      if (role.job_type !== "fte" || role.ctc_inr === null || role.selected_count === 0) continue;
+      groups.push({
+        ctc_inr: role.ctc_inr,
+        count: role.selected_count,
+        company: drive.company.name,
+        role: role.title,
+        driveId: drive.id,
+      });
     }
   }
-  return offers.sort((a, b) => a - b);
+  return groups.sort((a, b) => a.ctc_inr - b.ctc_inr);
 }
 
 export function topCtc(drive: DriveSummary): number | null {

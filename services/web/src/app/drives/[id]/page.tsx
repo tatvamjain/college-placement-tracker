@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -7,6 +8,7 @@ import { RouteLine } from "@/components/RouteLine";
 import { DriveStatusTag } from "@/components/StatusTag";
 import { api } from "@/lib/api";
 import {
+  DRIVE_BOARD_STATUS,
   formatDay,
   formatLPA,
   formatStipend,
@@ -36,7 +38,7 @@ async function Drive({ params }: { params: Params }) {
       <article className="pass" aria-label={`${drive.company.name} drive`}>
         <div className="pass-main">
           <div className="pass-band">
-            <span>CAMPUS DRIVE · BOARDING PASS</span>
+            <span>CAMPUS DRIVE</span>
             <span>NO. {String(drive.id).padStart(4, "0")}</span>
           </div>
 
@@ -97,8 +99,14 @@ async function Drive({ params }: { params: Params }) {
 
       <section className="section" style={{ marginTop: 24 }}>
         <div className="section-head">
-          <h2 className="section-title">Route</h2>
-          <span className="kicker">{drive.rounds.length} rounds</span>
+          <h2 className="section-title">Rounds</h2>
+          {drive.rounds.some((r) => r.scheduled_on) ? (
+            <a href={`/drives/${drive.id}/calendar`} className="cal-link" download>
+              + ADD ROUNDS TO CALENDAR
+            </a>
+          ) : (
+            <span className="kicker">{drive.rounds.length} rounds</span>
+          )}
         </div>
         <RouteLine rounds={drive.rounds} />
       </section>
@@ -135,9 +143,27 @@ function PassSkeleton() {
   );
 }
 
-export async function generateMetadata({ params }: PageProps<"/drives/[id]">) {
+export async function generateMetadata({ params }: PageProps<"/drives/[id]">): Promise<Metadata> {
   const { id } = await params;
-  return { title: `Drive ${id}` };
+  const drive = /^\d+$/.test(id) ? await api.drive(id) : null;
+  if (drive === null) return { title: "Drive not found" };
+
+  const top = topCtc(drive);
+  const placed = selectedCount(drive);
+  const facts = [
+    DRIVE_BOARD_STATUS[drive.status].label,
+    drive.visit_date ? `Visit ${formatDay(drive.visit_date)}` : null,
+    top !== null ? `Up to ${formatLPA(top)}` : null,
+    placed > 0 ? `${placed} placed` : null,
+  ].filter(Boolean);
+
+  const title = `${drive.company.name} · ${drive.season.label}`;
+  const description = `${facts.join(" · ")}. Roles: ${drive.roles.map((r) => r.title).join(", ")}.`;
+  return {
+    title,
+    description,
+    openGraph: { title: `${title} · Placement Board`, description, siteName: "Placement Board", type: "website" },
+  };
 }
 
 export default function DrivePage({ params }: PageProps<"/drives/[id]">) {

@@ -226,7 +226,7 @@ export function DriveEditor({
       </header>
 
       <section className="ed-card">
-        <h3 className="ed-title">Flight status</h3>
+        <h3 className="ed-title">Drive status</h3>
         <Segmented
           label="Drive status"
           value={drive.status}

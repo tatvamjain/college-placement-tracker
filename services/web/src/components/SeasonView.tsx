@@ -2,14 +2,16 @@ import { notFound } from "next/navigation";
 
 import { api } from "@/lib/api";
 import { formatLPA, lakhs } from "@/lib/format";
+import { seasonHeadlines } from "@/lib/headlines";
 import { fteOffers } from "@/lib/offers";
 
 import { DepartureBoard } from "./DepartureBoard";
+import { Headlines } from "./Headlines";
 import { OfferDistribution } from "./OfferDistribution";
 
 function caption(placed: number, median: number | null, average: number | null) {
   if (median === null) {
-    return <>No full-time results yet. The moment a company announces, the numbers land here.</>;
+    return <>No full-time results yet. The moment a company announces, the numbers show up here.</>;
   }
   const skewed = average !== null && average > median * 1.25;
   return (
@@ -44,26 +46,38 @@ export async function SeasonView({ label }: { label: string | null }) {
   const stats = await api.seasonStats(season.label);
   const offers = fteOffers(drives);
   const isLive = season.status === "active";
+  const headlines = isLive ? await seasonHeadlines(data) : [];
 
   return (
     <>
-      <section className="hero">
-        <div>
-          <p className="kicker">
-            {isLive && <span className="live-dot" aria-hidden />}
-            Season {season.label} · {isLive ? "Live" : "Archive"}
-          </p>
-          <div className="hero-figure" aria-label={`Median package ${formatLPA(stats?.median_ctc_inr ?? null)}`}>
-            <span className="rupee">₹</span>
-            <span className="value">{stats?.median_ctc_inr != null ? lakhs(stats.median_ctc_inr) : "—"}</span>
-            <span className="unit">LPA · MEDIAN</span>
+      <section className={isLive ? "hero hero-live" : "hero"}>
+        {isLive ? (
+          <Headlines
+            seasonLabel={season.label}
+            items={headlines}
+            boarding={drives.filter((d) => d.status === "ongoing")}
+          />
+        ) : (
+          <div>
+            <p className="kicker">Season {season.label} · Archive</p>
+            <div className="hero-figure" aria-label={`Median package ${formatLPA(stats?.median_ctc_inr ?? null)}`}>
+              <span className="rupee">₹</span>
+              <span className="value">{stats?.median_ctc_inr != null ? lakhs(stats.median_ctc_inr) : "—"}</span>
+              <span className="unit">LPA · MEDIAN</span>
+            </div>
+            <p className="hero-caption">
+              {caption(stats?.fte_offers ?? 0, stats?.median_ctc_inr ?? null, stats?.average_ctc_inr ?? null)}
+            </p>
           </div>
-          <p className="hero-caption">
-            {caption(stats?.fte_offers ?? 0, stats?.median_ctc_inr ?? null, stats?.average_ctc_inr ?? null)}
-          </p>
-        </div>
+        )}
 
         <div className="readouts">
+          {isLive && (
+            <div className="readout accent">
+              <p className="kicker">Median</p>
+              <p className="num">{formatLPA(stats?.median_ctc_inr ?? null)}</p>
+            </div>
+          )}
           <div className="readout">
             <p className="kicker">Companies</p>
             <p className="num">{stats?.companies ?? 0}</p>
@@ -75,7 +89,7 @@ export async function SeasonView({ label }: { label: string | null }) {
               <small>offers</small>
             </p>
           </div>
-          <div className="readout accent">
+          <div className={isLive ? "readout" : "readout accent"}>
             <p className="kicker">Highest</p>
             <p className="num">{formatLPA(stats?.highest_ctc_inr ?? null)}</p>
           </div>
@@ -87,16 +101,18 @@ export async function SeasonView({ label }: { label: string | null }) {
             <p className="kicker">Internships</p>
             <p className="num">{stats?.intern_offers ?? 0}</p>
           </div>
-          <div className="readout">
-            <p className="kicker">Drives</p>
-            <p className="num">{drives.length}</p>
-          </div>
+          {!isLive && (
+            <div className="readout">
+              <p className="kicker">Drives</p>
+              <p className="num">{drives.length}</p>
+            </div>
+          )}
         </div>
       </section>
 
       <section className="section">
         <div className="section-head">
-          <h2 className="section-title">Where the offers landed</h2>
+          <h2 className="section-title">How packages are spread</h2>
           <span className="kicker">Full-time · per student</span>
         </div>
         <OfferDistribution
@@ -108,7 +124,7 @@ export async function SeasonView({ label }: { label: string | null }) {
 
       <section className="section">
         <div className="section-head">
-          <h2 className="section-title">Departures</h2>
+          <h2 className="section-title">All drives</h2>
           <span className="kicker">{drives.length} drives · tap one for details</span>
         </div>
         <DepartureBoard drives={drives} />
