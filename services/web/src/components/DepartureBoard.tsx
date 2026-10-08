@@ -10,7 +10,7 @@ import { selectedCount, topCtc } from "@/lib/offers";
 import { Flaps } from "./Flaps";
 import { DriveStatusTag } from "./StatusTag";
 
-type Filter = "all" | "fte" | "intern" | "ongoing" | "upcoming" | "results" | "hold";
+type Filter = "all" | "fte" | "intern" | "intern_fte" | "ongoing" | "upcoming" | "results" | "hold";
 
 const FILTERS: { id: Filter; label: string; test: (d: DriveSummary) => boolean }[] = [
   { id: "all", label: "All", test: () => true },
@@ -20,6 +20,7 @@ const FILTERS: { id: Filter; label: string; test: (d: DriveSummary) => boolean }
   { id: "hold", label: "On hold", test: (d) => d.status === "cancelled" },
   { id: "fte", label: "Full-time", test: (d) => d.roles.some((r) => r.job_type !== "intern") },
   { id: "intern", label: "Internships", test: (d) => d.roles.some((r) => r.job_type !== "fte") },
+  { id: "intern_fte", label: "Intern + FTE", test: (d) => d.roles.some((r) => r.job_type === "intern_fte") },
 ];
 
 function headline(drive: DriveSummary): string {
@@ -31,7 +32,11 @@ function headline(drive: DriveSummary): string {
 
 function matches(drive: DriveSummary, query: string): boolean {
   if (!query) return true;
-  const haystack = [drive.company.name, drive.company.sector ?? "", ...drive.roles.flatMap((r) => [r.title, r.location ?? ""])]
+  const haystack = [
+    drive.company.name,
+    drive.company.sector ?? "",
+    ...drive.roles.flatMap((r) => [r.title, r.location ?? ""]),
+  ]
     .join(" ")
     .toLowerCase();
   return query
@@ -54,7 +59,9 @@ export function DepartureBoard({ drives }: { drives: DriveSummary[] }) {
         <div className="board-tools">
           <label className="board-search">
             <span className="sr-only">Search companies, roles or cities</span>
-            <span aria-hidden className="board-search-icon">⌕</span>
+            <span aria-hidden className="board-search-icon">
+              ⌕
+            </span>
             <input
               type="search"
               placeholder="Search company, role or city"

@@ -1,5 +1,5 @@
 import { api, type DriveDetail, type SeasonDrives } from "./api";
-import { formatLPA } from "./format";
+import { formatLPA, FULL_TIME_TYPES } from "./format";
 
 export type Headline = {
   key: string;
@@ -11,8 +11,9 @@ export type Headline = {
 };
 
 function resultsLine(d: DriveDetail): string {
-  const fte = d.roles.filter((r) => r.job_type === "fte").reduce((n, r) => n + r.selected_count, 0);
-  const intern = d.roles.filter((r) => r.job_type !== "fte").reduce((n, r) => n + r.selected_count, 0);
+  const isFte = (r: DriveDetail["roles"][number]) => FULL_TIME_TYPES.includes(r.job_type);
+  const fte = d.roles.filter(isFte).reduce((n, r) => n + r.selected_count, 0);
+  const intern = d.roles.filter((r) => !isFte(r)).reduce((n, r) => n + r.selected_count, 0);
   const top = Math.max(0, ...d.roles.filter((r) => r.selected_count > 0).map((r) => r.ctc_inr ?? 0));
   const parts = [
     fte > 0 && `${fte} full-time ${fte === 1 ? "offer" : "offers"}`,

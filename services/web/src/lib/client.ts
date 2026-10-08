@@ -1,14 +1,6 @@
 // Browser-side API calls. Same origin as the site: Caddy routes /api/* to the services
 // in production, and next.config.ts rewrites do the same during `npm run dev`.
-import type {
-  Company,
-  DriveDetail,
-  DriveStatus,
-  JobType,
-  RoundStatus,
-  RoundType,
-  SeasonDrives,
-} from "./api";
+import type { Company, DriveDetail, DriveStatus, JobType, RoundStatus, RoundType, SeasonDrives } from "./api";
 
 const AUTH = "/api/auth/auth";
 const PLACEMENT = "/api/placement";
@@ -88,6 +80,7 @@ export type RoleDraft = {
   title: string;
   job_type: JobType;
   ctc_inr: number | null;
+  base_inr: number | null;
   stipend_inr: number | null;
   location: string | null;
 };
@@ -103,17 +96,18 @@ export const admin = {
     season_label: string;
     company_id: number;
     visit_date: string | null;
+    details: string | null;
     roles: RoleDraft[];
     rounds: RoundDraft[];
   }) => request<DriveDetail>(`${PLACEMENT}/admin/drives`, json("POST", body)),
-  patchDrive: (id: number, body: { status?: DriveStatus; visit_date?: string | null }) =>
+  patchDrive: (id: number, body: { status?: DriveStatus; visit_date?: string | null; details?: string | null }) =>
     request<unknown>(`${PLACEMENT}/admin/drives/${id}`, json("PATCH", body)),
   patchRound: (
     driveId: number,
     order: number,
     body: { status?: RoundStatus; shortlisted_count?: number | null; scheduled_on?: string | null },
   ) => request<unknown>(`${PLACEMENT}/admin/drives/${driveId}/rounds/${order}`, json("PATCH", body)),
-  patchRole: (id: number, body: { selected_count: number }) =>
+  patchRole: (id: number, body: { selected_count?: number; base_inr?: number | null }) =>
     request<unknown>(`${PLACEMENT}/admin/roles/${id}`, json("PATCH", body)),
   deleteDrive: (id: number) => request<void>(`${PLACEMENT}/admin/drives/${id}`, { method: "DELETE" }),
   postUpdate: (driveId: number, message: string) =>

@@ -7,14 +7,7 @@ import { Barcode } from "@/components/Barcode";
 import { RouteLine } from "@/components/RouteLine";
 import { DriveStatusTag } from "@/components/StatusTag";
 import { api } from "@/lib/api";
-import {
-  DRIVE_BOARD_STATUS,
-  formatDay,
-  formatLPA,
-  formatStipend,
-  formatTimestamp,
-  JOB_TYPE_LABELS,
-} from "@/lib/format";
+import { DRIVE_BOARD_STATUS, formatDay, formatLPA, formatTimestamp, JOB_TYPE_LABELS, rolePay } from "@/lib/format";
 import { selectedCount, topCtc } from "@/lib/offers";
 
 type Params = PageProps<"/drives/[id]">["params"];
@@ -72,7 +65,10 @@ async function Drive({ params }: { params: Params }) {
                 <span className="fare-title">{role.title}</span>
                 <span className="fare-type">{JOB_TYPE_LABELS[role.job_type]}</span>
                 <span className="fare-money">
-                  {role.ctc_inr !== null ? formatLPA(role.ctc_inr) : formatStipend(role.stipend_inr)}
+                  {rolePay(role).main}
+                  {rolePay(role).extra.map((x) => (
+                    <small key={x}>{x}</small>
+                  ))}
                 </span>
                 <span className="fare-loc">{role.location ?? "Location TBA"}</span>
                 <span className="fare-sel">
@@ -82,6 +78,13 @@ async function Drive({ params }: { params: Params }) {
               </div>
             ))}
           </div>
+
+          {drive.details && (
+            <div className="pass-note">
+              <p className="pass-note-label">DETAILS &amp; ELIGIBILITY</p>
+              <p className="pass-note-text">{drive.details}</p>
+            </div>
+          )}
         </div>
 
         <aside className="pass-stub">

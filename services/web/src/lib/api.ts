@@ -8,7 +8,7 @@ const API = process.env.PLACEMENT_API_URL ?? "http://127.0.0.1:8002";
 
 export type SeasonStatus = "active" | "archived";
 export type DriveStatus = "announced" | "ongoing" | "completed" | "cancelled";
-export type JobType = "fte" | "intern" | "intern_ppo";
+export type JobType = "fte" | "intern" | "intern_ppo" | "intern_fte";
 export type RoundType = "ppt" | "oa" | "gd" | "technical" | "hr";
 export type RoundStatus = "scheduled" | "ongoing" | "completed";
 
@@ -19,6 +19,7 @@ export type Role = {
   title: string;
   job_type: JobType;
   ctc_inr: number | null;
+  base_inr: number | null;
   stipend_inr: number | null;
   location: string | null;
   selected_count: number;
@@ -42,6 +43,7 @@ export type DriveSummary = {
 export type DriveDetail = DriveSummary & {
   season: Season;
   results_published_at: string | null;
+  details: string | null;
   rounds: Round[];
   updates: DriveUpdate[];
 };

@@ -17,9 +17,7 @@ export function formatStipend(inr: number | null): string {
 }
 
 export function formatDay(isoDate: string): string {
-  return new Date(isoDate)
-    .toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: IST })
-    .toUpperCase();
+  return new Date(isoDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: IST }).toUpperCase();
 }
 
 export function formatLongDay(isoDate: string): string {
@@ -77,4 +75,18 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   fte: "Full-time",
   intern: "Internship",
   intern_ppo: "Intern + PPO",
+  intern_fte: "Intern + FTE",
 };
+
+// Roles whose selected students end up with a full-time offer.
+export const FULL_TIME_TYPES: JobType[] = ["fte", "intern_fte"];
+
+// The headline figure for a role, plus the smaller print under it.
+export function rolePay(role: { ctc_inr: number | null; base_inr: number | null; stipend_inr: number | null }) {
+  const main = role.ctc_inr !== null ? formatLPA(role.ctc_inr) : formatStipend(role.stipend_inr);
+  const extra = [
+    role.ctc_inr !== null && role.base_inr !== null && `Base ₹${lakhs(role.base_inr)} LPA`,
+    role.ctc_inr !== null && role.stipend_inr !== null && `Stipend ${formatStipend(role.stipend_inr)}`,
+  ].filter((x): x is string => Boolean(x));
+  return { main, extra };
+}

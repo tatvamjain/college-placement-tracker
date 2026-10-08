@@ -7,13 +7,12 @@ import type { DriveDetail, DriveStatus, Role, Round, RoundStatus } from "@/lib/a
 import { admin } from "@/lib/client";
 import {
   DRIVE_BOARD_STATUS,
-  formatLPA,
-  formatStipend,
   formatTimestamp,
   JOB_TYPE_LABELS,
   ROUND_BOARD_STATUS,
   ROUND_CODES,
   ROUND_NAMES,
+  rolePay,
 } from "@/lib/format";
 
 import type { Notify } from "./ControlTower";
@@ -122,32 +121,53 @@ function RoundRow({ driveId, round, run }: { driveId: number; round: Round; run:
   );
 }
 
+const toLakhs = (inr: number | null) => (inr === null ? "" : String(inr / 100_000));
+
 function RoleRow({ role, run }: { role: Role; run: Run }) {
   const [count, setCount] = useState(String(role.selected_count));
-  const dirty = count !== String(role.selected_count) && count !== "";
+  const [base, setBase] = useState(toLakhs(role.base_inr));
+  const hasCtc = role.ctc_inr !== null;
+  const countDirty = count !== String(role.selected_count) && count !== "";
+  const baseDirty = hasCtc && base !== toLakhs(role.base_inr);
+  const baseTooHigh = base !== "" && role.ctc_inr !== null && Number(base) * 100_000 > role.ctc_inr;
+  const pay = rolePay(role);
+
+  function save() {
+    const body: { selected_count?: number; base_inr?: number | null } = {};
+    if (countDirty) body.selected_count = Number(count);
+    if (baseDirty) body.base_inr = base === "" ? null : Math.round(Number(base) * 100_000);
+    return run(`${role.title} saved`, () => admin.patchRole(role.id, body));
+  }
 
   return (
     <div className="ed-role">
       <div className="ed-role-name">
         {role.title}
         <small>
-          {JOB_TYPE_LABELS[role.job_type]} ·{" "}
-          {role.ctc_inr !== null ? formatLPA(role.ctc_inr) : formatStipend(role.stipend_inr)}
-          {role.location ? ` · ${role.location}` : ""}
+          {[JOB_TYPE_LABELS[role.job_type], pay.main, ...pay.extra, role.location].filter(Boolean).join(" · ")}
         </small>
       </div>
+      {hasCtc && (
+        <label className="ed-mini">
+          <span>BASE (LPA)</span>
+          <input
+            type="number"
+            min={0}
+            step="0.1"
+            inputMode="decimal"
+            placeholder="—"
+            value={base}
+            onChange={(e) => setBase(e.target.value)}
+            aria-invalid={baseTooHigh}
+          />
+        </label>
+      )}
       <label className="ed-mini ed-placed">
         <span>PLACED</span>
         <input type="number" min={0} inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} />
       </label>
-      <button
-        className="btn btn-small"
-        disabled={!dirty}
-        onClick={() =>
-          run(`${role.title}: ${count} placed`, () => admin.patchRole(role.id, { selected_count: Number(count) }))
-        }
-      >
-        PUBLISH
+      <button className="btn btn-small" disabled={(!countDirty && !baseDirty) || baseTooHigh} onClick={save}>
+        SAVE
       </button>
     </div>
   );
@@ -215,12 +235,14 @@ export function DriveEditor({
   const [busy, setBusy] = useState(false);
   const [visit, setVisit] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const [details, setDetails] = useState<string | null>(null);
 
   const load = useCallback(
     () =>
       admin.drive(id).then((d) => {
         setDrive(d);
         setVisit(d.visit_date ?? "");
+        setDetails(d.details ?? "");
         setVersion((v) => v + 1);
       }),
     [id],
@@ -251,6 +273,7 @@ export function DriveEditor({
   }
 
   const visitDirty = visit !== null && visit !== (drive.visit_date ?? "");
+  const detailsDirty = details !== null && details.trim() !== (drive.details ?? "");
 
   return (
     <div className={`editor${busy ? " is-busy" : ""}`}>
@@ -294,6 +317,29 @@ export function DriveEditor({
             className="btn btn-small"
             disabled={!visitDirty || busy}
             onClick={() => run("Visit date saved", () => admin.patchDrive(drive.id, { visit_date: visit || null }))}
+          >
+            SAVE
+          </button>
+        </div>
+      </section>
+
+      <section className="ed-card">
+        <h3 className="ed-title">Details &amp; eligibility</h3>
+        <p className="ed-help">Shown on the drive page. CGPA cut-off, branches, bond, anything students should know.</p>
+        <textarea
+          className="ed-text"
+          rows={3}
+          maxLength={2000}
+          placeholder={"e.g. CGPA cut-off 7.5 (internal)\nBranches: CSE, ECE"}
+          value={details ?? ""}
+          onChange={(e) => setDetails(e.target.value)}
+        />
+        <div className="ed-inline ed-between">
+          <span className="ed-count">{(details ?? "").length}/2000</span>
+          <button
+            className="btn btn-small"
+            disabled={!detailsDirty || busy}
+            onClick={() => run("Details saved", () => admin.patchDrive(drive.id, { details: details?.trim() || null }))}
           >
             SAVE
           </button>

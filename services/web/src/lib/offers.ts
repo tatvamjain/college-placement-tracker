@@ -1,4 +1,5 @@
 import type { DriveSummary } from "./api";
+import { FULL_TIME_TYPES } from "./format";
 
 // One group per full-time role with results, matching how the API computes stats.
 // `count` students got `ctc_inr`; the chart draws one dot per student.
@@ -15,7 +16,7 @@ export function fteOffers(drives: DriveSummary[]): OfferGroup[] {
   for (const drive of drives) {
     if (drive.status === "cancelled") continue;
     for (const role of drive.roles) {
-      if (role.job_type !== "fte" || role.ctc_inr === null || role.selected_count === 0) continue;
+      if (!FULL_TIME_TYPES.includes(role.job_type) || role.ctc_inr === null || role.selected_count === 0) continue;
       groups.push({
         ctc_inr: role.ctc_inr,
         count: role.selected_count,

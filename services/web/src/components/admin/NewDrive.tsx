@@ -8,10 +8,11 @@ import { JOB_TYPE_LABELS, ROUND_NAMES } from "@/lib/format";
 
 import type { Notify } from "./ControlTower";
 
-type RoleForm = { title: string; job_type: JobType; lpa: string; stipend: string; location: string };
+type RoleForm = { title: string; job_type: JobType; lpa: string; base: string; stipend: string; location: string };
 type RoundForm = { round_type: RoundType; scheduled_on: string };
 
-const blankRole = (): RoleForm => ({ title: "", job_type: "fte", lpa: "", stipend: "", location: "" });
+const blankRole = (): RoleForm => ({ title: "", job_type: "fte", lpa: "", base: "", stipend: "", location: "" });
+const MAX_DETAILS = 2000;
 const JOB_TYPES = Object.keys(JOB_TYPE_LABELS) as JobType[];
 const ROUND_TYPES = Object.keys(ROUND_NAMES) as RoundType[];
 
@@ -19,8 +20,9 @@ function toDraft(r: RoleForm): RoleDraft {
   return {
     title: r.title.trim(),
     job_type: r.job_type,
-    ctc_inr: r.lpa === "" ? null : Math.round(Number(r.lpa) * 100_000),
-    stipend_inr: r.stipend === "" ? null : Math.round(Number(r.stipend)),
+    ctc_inr: r.job_type === "intern" || r.lpa === "" ? null : Math.round(Number(r.lpa) * 100_000),
+    base_inr: r.job_type === "intern" || r.base === "" ? null : Math.round(Number(r.base) * 100_000),
+    stipend_inr: r.job_type === "fte" || r.stipend === "" ? null : Math.round(Number(r.stipend)),
     location: r.location.trim() || null,
   };
 }
@@ -42,12 +44,15 @@ export function NewDrive({
   const [newName, setNewName] = useState("");
   const [newSector, setNewSector] = useState("");
   const [visit, setVisit] = useState("");
+  const [details, setDetails] = useState("");
   const [roles, setRoles] = useState<RoleForm[]>([blankRole()]);
   const [rounds, setRounds] = useState<RoundForm[]>([]);
   const [busy, setBusy] = useState(false);
 
   const isNew = companyId === "new";
-  const valid = (isNew ? newName.trim() : companyId) && roles.length > 0 && roles.every((r) => r.title.trim());
+  const baseTooHigh = (r: RoleForm) => r.lpa !== "" && r.base !== "" && Number(r.base) > Number(r.lpa);
+  const valid =
+    (isNew ? newName.trim() : companyId) && roles.length > 0 && roles.every((r) => r.title.trim() && !baseTooHigh(r));
 
   const editRole = (i: number, patch: Partial<RoleForm>) =>
     setRoles((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
@@ -74,6 +79,7 @@ export function NewDrive({
         season_label: seasonLabel,
         company_id: id,
         visit_date: visit || null,
+        details: details.trim() || null,
         roles: roles.map(toDraft),
         rounds: rounds.map((r) => ({ round_type: r.round_type, scheduled_on: r.scheduled_on || null })),
       });
@@ -128,6 +134,17 @@ export function NewDrive({
             <span>VISIT DATE</span>
             <input type="date" value={visit} onChange={(e) => setVisit(e.target.value)} />
           </label>
+          <label className="ed-field ed-span">
+            <span>DETAILS &amp; ELIGIBILITY (OPTIONAL)</span>
+            <textarea
+              className="ed-text"
+              rows={3}
+              maxLength={MAX_DETAILS}
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+              placeholder={"e.g. CGPA cut-off 7.5 (internal)\nBranches: CSE, ECE\n1-year service bond"}
+            />
+          </label>
         </div>
       </section>
 
@@ -138,7 +155,11 @@ export function NewDrive({
             <div className="ed-grid">
               <label className="ed-field ed-span">
                 <span>TITLE</span>
-                <input value={r.title} onChange={(e) => editRole(i, { title: e.target.value })} placeholder="e.g. Software Engineer" />
+                <input
+                  value={r.title}
+                  onChange={(e) => editRole(i, { title: e.target.value })}
+                  placeholder="e.g. Software Engineer"
+                />
               </label>
               <label className="ed-field">
                 <span>TYPE</span>
@@ -152,18 +173,50 @@ export function NewDrive({
               </label>
               <label className="ed-field">
                 <span>LOCATION</span>
-                <input value={r.location} onChange={(e) => editRole(i, { location: e.target.value })} placeholder="e.g. Bengaluru" />
+                <input
+                  value={r.location}
+                  onChange={(e) => editRole(i, { location: e.target.value })}
+                  placeholder="e.g. Bengaluru"
+                />
               </label>
               {r.job_type !== "intern" && (
                 <label className="ed-field">
                   <span>CTC (LPA)</span>
-                  <input type="number" min={0} step="0.1" value={r.lpa} onChange={(e) => editRole(i, { lpa: e.target.value })} placeholder="e.g. 12.5" />
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.1"
+                    value={r.lpa}
+                    onChange={(e) => editRole(i, { lpa: e.target.value })}
+                    placeholder="e.g. 12.5"
+                  />
+                </label>
+              )}
+              {r.job_type !== "intern" && (
+                <label className="ed-field">
+                  <span>BASE SALARY (LPA)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.1"
+                    value={r.base}
+                    onChange={(e) => editRole(i, { base: e.target.value })}
+                    placeholder="e.g. 9"
+                  />
+                  {baseTooHigh(r) && <em className="ed-warn">Base can&apos;t be more than the CTC</em>}
                 </label>
               )}
               {r.job_type !== "fte" && (
                 <label className="ed-field">
                   <span>STIPEND (₹/MONTH)</span>
-                  <input type="number" min={0} step="1000" value={r.stipend} onChange={(e) => editRole(i, { stipend: e.target.value })} placeholder="e.g. 80000" />
+                  <input
+                    type="number"
+                    min={0}
+                    step="1000"
+                    value={r.stipend}
+                    onChange={(e) => editRole(i, { stipend: e.target.value })}
+                    placeholder="e.g. 80000"
+                  />
                 </label>
               )}
             </div>
@@ -192,8 +245,17 @@ export function NewDrive({
                 </option>
               ))}
             </select>
-            <input type="date" value={r.scheduled_on} onChange={(e) => editRound(i, { scheduled_on: e.target.value })} />
-            <button type="button" className="link-btn" aria-label={`Remove round ${i + 1}`} onClick={() => setRounds((rs) => rs.filter((_, j) => j !== i))}>
+            <input
+              type="date"
+              value={r.scheduled_on}
+              onChange={(e) => editRound(i, { scheduled_on: e.target.value })}
+            />
+            <button
+              type="button"
+              className="link-btn"
+              aria-label={`Remove round ${i + 1}`}
+              onClick={() => setRounds((rs) => rs.filter((_, j) => j !== i))}
+            >
               ✕
             </button>
           </div>
@@ -201,7 +263,9 @@ export function NewDrive({
         <button
           type="button"
           className="link-btn"
-          onClick={() => setRounds((rs) => [...rs, { round_type: rs.length === 0 ? "ppt" : "technical", scheduled_on: "" }])}
+          onClick={() =>
+            setRounds((rs) => [...rs, { round_type: rs.length === 0 ? "ppt" : "technical", scheduled_on: "" }])
+          }
         >
           + Add a round
         </button>
