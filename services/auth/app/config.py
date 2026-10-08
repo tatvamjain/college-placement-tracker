@@ -28,6 +28,12 @@ class Settings(BaseSettings):
     access_token_ttl_seconds: int = 900
     refresh_token_ttl_days: int = 30
 
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+
     @property
     def database_url(self) -> str:
         return (
