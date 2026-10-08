@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     db_port: int = 5433
     db_name: str = "placement_db"
 
+    jwt_public_key_path: str = "../../secrets/jwt_public.pem"
+    jwt_issuer: str = "auth-service"
+    
     @property
     def database_url(self) -> str:
         return (

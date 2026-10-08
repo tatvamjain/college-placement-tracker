@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator, Field
 
 from app.models import DriveStatus, JobType, RoundStatus, RoundType, SeasonStatus
 
@@ -74,3 +74,45 @@ class TodayRound(BaseModel):
 class TodayOut(BaseModel):
     day: date
     rounds: list[TodayRound]
+
+class CompanyIn(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    sector: str | None = Field(default=None, max_length=100)
+    website: str | None = Field(default=None, max_length=255)
+
+
+class RoleIn(BaseModel):
+    title: str = Field(min_length=1, max_length=100)
+    job_type: JobType
+    ctc_inr: int | None = Field(default=None, ge=0)
+    stipend_inr: int | None = Field(default=None, ge=0)
+    location: str | None = Field(default=None, max_length=100)
+
+
+class RoundIn(BaseModel):
+    round_type: RoundType
+    scheduled_on: date | None = None
+
+
+class DriveIn(BaseModel):
+    season_label: str
+    company_id: int
+    visit_date: date | None = None
+    roles: list[RoleIn] = Field(min_length=1)
+    rounds: list[RoundIn] = []
+
+
+class DrivePatch(BaseModel):
+    status: DriveStatus | None = None
+    visit_date: date | None = None
+
+    @field_validator("status")
+    @classmethod
+    def status_not_null(cls, v: DriveStatus | None) -> DriveStatus:
+        if v is None:
+            raise ValueError("status cannot be null")
+        return v
+
+
+class UpdateIn(BaseModel):
+    message: str = Field(min_length=1, max_length=2000)
