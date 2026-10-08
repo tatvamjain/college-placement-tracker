@@ -4,8 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import admin as admin_service
 from app import queries
 from app.db import get_session
-from app.schemas import CompanyIn, CompanyOut, DriveDetail, DriveIn, DrivePatch, UpdateIn, UpdateOut, RolePatch
+from app.schemas import CompanyIn, CompanyOut, DriveDetail, DriveIn, DrivePatch, UpdateIn, UpdateOut, RolePatch, RoundPatch
 from app.security import Admin, require_admin
+from sqlalchemy import select
+from app.models import Company, Drive, DriveRole
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -62,4 +64,23 @@ async def patch_role(
     session: AsyncSession = Depends(get_session),
 ):
     drive_id = await admin_service.patch_role(session, admin.user_id, role_id, body)
+    return await _fresh_drive(session, drive_id)
+
+@router.get("/companies", response_model=list[CompanyOut])
+async def list_companies(
+    admin: Admin = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+):
+    return (await session.scalars(select(Company).order_by(Company.name))).all()
+
+
+@router.patch("/drives/{drive_id}/rounds/{round_order}", response_model=DriveDetail)
+async def patch_round(
+    drive_id: int,
+    round_order: int,
+    body: RoundPatch,
+    admin: Admin = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+):
+    await admin_service.patch_round(session, admin.user_id, drive_id, round_order, body)
     return await _fresh_drive(session, drive_id)

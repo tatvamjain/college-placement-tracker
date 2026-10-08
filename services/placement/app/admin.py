@@ -16,8 +16,8 @@ from app.models import (
     PlacementOutbox,
     Season,
 )
-from app.schemas import CompanyIn, DriveIn, DrivePatch, UpdateIn, RolePatch
-from app.models import SeasonStatus
+from app.schemas import CompanyIn, DriveIn, DrivePatch, UpdateIn, RolePatch, RoundPatch
+from app.models import SeasonStatus, DriveRound, DriveUpdate
 
 class NotFound(Exception):
     pass
@@ -160,3 +160,21 @@ async def patch_role(
     await session.commit()
     await cache.delete(cache.stats_key(season.label))
     return drive.id
+
+async def patch_round(
+    session: AsyncSession, actor_id: uuid.UUID, drive_id: int, round_order: int, data: RoundPatch
+) -> None:
+    rnd = await session.scalar(
+        select(DriveRound).where(DriveRound.drive_id == drive_id, DriveRound.round_order == round_order)
+    )
+    if rnd is None:
+        raise NotFound("Round not found")
+    updates = data.model_dump(exclude_unset=True)
+    if not updates:
+        return
+    changes = {}
+    for field, new in updates.items():
+        changes[field] = {"from": jsonable_encoder(getattr(rnd, field)), "to": jsonable_encoder(new)}
+        setattr(rnd, field, new)
+    _record(session, actor_id, "update", "round", rnd.id, changes)
+    await session.commit()

@@ -140,3 +140,15 @@ class RolePatch(BaseModel):
         if v is None:
             raise ValueError("selected_count cannot be null")
         return v
+
+class RoundPatch(BaseModel):
+    status: RoundStatus | None = None
+    scheduled_on: date | None = None
+    shortlisted_count: int | None = Field(default=None, ge=0)
+
+    @field_validator("status")
+    @classmethod
+    def status_not_null(cls, v: RoundStatus | None) -> RoundStatus:
+        if v is None:
+            raise ValueError("status cannot be null")
+        return v

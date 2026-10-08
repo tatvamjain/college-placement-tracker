@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { Suspense } from "react";
 
 import { Clock } from "./Clock";
+import { CheckInLink, SessionLink } from "./SessionLink";
 
 export function SiteHeader() {
   return (
@@ -21,6 +23,9 @@ export function SiteHeader() {
           <Link href="/seasons">ARCHIVE</Link>
         </nav>
         <Clock />
+        <Suspense fallback={<CheckInLink />}>
+          <SessionLink />
+        </Suspense>
       </div>
     </header>
   );
