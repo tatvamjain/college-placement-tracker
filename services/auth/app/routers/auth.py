@@ -1,10 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.cookies import REFRESH_COOKIE, clear_auth_cookies, set_auth_cookies
 from app.deps import get_current_claims, get_session
-from app.schemas import MessageResponse, OtpRequest, OtpVerify, TokenResponse
-from app.services import otp_service, users
+from app.schemas import (
+    MessageResponse, OtpRequest, OtpVerify, RefreshRequest, RefreshResponse, TokenResponse,
+)
+from app.services import otp_service, refresh_service, users
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -27,7 +30,10 @@ async def request_otp(body: OtpRequest) -> MessageResponse:
 
 @router.post("/otp/verify", response_model=TokenResponse)
 async def verify_otp(
-    body: OtpVerify, request: Request, session: AsyncSession = Depends(get_session)
+    body: OtpVerify,
+    request: Request,
+    response: Response,
+    session: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
     try:
         await otp_service.verify_otp_code(body.email, body.code)
@@ -46,6 +52,7 @@ async def verify_otp(
             session, user, request.headers.get("user-agent", "")
         )
 
+    set_auth_cookies(response, access, refresh)
     return TokenResponse(
         access_token=access,
         refresh_token=refresh,
@@ -64,32 +71,41 @@ async def me(claims: dict = Depends(get_current_claims)) -> dict:
     }
 
 
-from fastapi import Depends, Response
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.deps import get_session
-from app.schemas import RefreshRequest, RefreshResponse
-from app.services import refresh_service
-
-
 @router.post("/refresh", response_model=RefreshResponse)
 async def refresh(
-    body: RefreshRequest, session: AsyncSession = Depends(get_session)
+    request: Request,
+    response: Response,
+    body: RefreshRequest | None = None,
+    session: AsyncSession = Depends(get_session),
 ) -> RefreshResponse:
+    from_cookie = body is None
+    token = request.cookies.get(REFRESH_COOKIE) if from_cookie else body.refresh_token
+    if not token:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not logged in")
     try:
-        access, new_refresh = await refresh_service.rotate(session, body.refresh_token)
+        access, new_refresh = await refresh_service.rotate(session, token)
     except refresh_service.InvalidRefreshToken:
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED, "Invalid or expired refresh token"
         )
     except refresh_service.UserBanned:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Account suspended")
+
+    if from_cookie:
+        set_auth_cookies(response, access, new_refresh)
+        return RefreshResponse()
     return RefreshResponse(access_token=access, refresh_token=new_refresh)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
-    body: RefreshRequest, session: AsyncSession = Depends(get_session)
+    request: Request,
+    body: RefreshRequest | None = None,
+    session: AsyncSession = Depends(get_session),
 ) -> Response:
-    await refresh_service.revoke(session, body.refresh_token)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    token = body.refresh_token if body else request.cookies.get(REFRESH_COOKIE)
+    if token:
+        await refresh_service.revoke(session, token)
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
+    clear_auth_cookies(response)
+    return response

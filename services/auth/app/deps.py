@@ -1,7 +1,7 @@
 from collections.abc import AsyncIterator
-
+from app.cookies import ACCESS_COOKIE
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models import UserRole
@@ -23,20 +23,28 @@ def _unauthorized(detail: str) -> HTTPException:
         headers={"WWW-Authenticate": "Bearer"},
     )
 
+SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+
 
 async def get_current_claims(
+    request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ) -> dict:
-    if credentials is None:
-        raise _unauthorized("Not authenticated")
+    if credentials is not None:
+        token = credentials.credentials
+    else:
+        token = request.cookies.get(ACCESS_COOKIE)
+        if token is None:
+            raise _unauthorized("Not authenticated")
+        if request.method not in SAFE_METHODS and request.headers.get("x-csrf") != "1":
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Missing CSRF header")
     try:
-        return decode_access_token(credentials.credentials)
+        return decode_access_token(token)
     except jwt.ExpiredSignatureError:
         raise _unauthorized("Token expired")
     except jwt.InvalidTokenError:
         raise _unauthorized("Invalid token")
-
-
+    
 def require_role(*roles: UserRole):
     allowed = {r.value for r in roles}
 

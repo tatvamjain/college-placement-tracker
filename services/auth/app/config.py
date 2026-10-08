@@ -33,7 +33,8 @@ class Settings(BaseSettings):
     smtp_user: str = ""
     smtp_password: str = ""
     smtp_from: str = ""
-
+    refresh_cookie_path: str = "/api/auth/auth"
+    refresh_cookie_max_age: int = 60 * 60 * 24 * 30
     @property
     def database_url(self) -> str:
         return (
