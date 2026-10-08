@@ -22,6 +22,7 @@ class CompanyOut(ORMModel):
 
 
 class RoleOut(ORMModel):
+    id:int
     title: str
     job_type: JobType
     ctc_inr: int | None
@@ -116,3 +117,24 @@ class DrivePatch(BaseModel):
 
 class UpdateIn(BaseModel):
     message: str = Field(min_length=1, max_length=2000)
+
+class SeasonStats(BaseModel):
+    season: str
+    companies: int
+    fte_offers: int
+    intern_offers: int
+    highest_ctc_inr: int | None
+    median_ctc_inr: int | None
+    average_ctc_inr: int | None
+
+
+class RolePatch(BaseModel):
+    selected_count: int | None = Field(default=None, ge=0)
+    ctc_inr: int | None = Field(default=None, ge=0)
+
+    @field_validator("selected_count")
+    @classmethod
+    def selected_not_null(cls, v: int | None) -> int:
+        if v is None:
+            raise ValueError("selected_count cannot be null")
+        return v

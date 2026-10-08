@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import Row, select
+from sqlalchemy import Row, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -61,3 +61,30 @@ async def rounds_on(session: AsyncSession, day: date) -> list[Row]:
         .order_by(Company.name, DriveRound.round_order)
     )
     return list(await session.execute(stmt))
+
+SEASON_STATS_SQL = text("""
+WITH season_roles AS (
+    SELECT r.job_type, r.ctc_inr, r.selected_count, d.company_id
+    FROM drive_roles r
+    JOIN drives d ON d.id = r.drive_id
+    WHERE d.season_id = :season_id AND d.status <> 'cancelled'
+),
+fte_offers AS (
+    SELECT sr.ctc_inr
+    FROM season_roles sr
+    CROSS JOIN LATERAL generate_series(1, sr.selected_count)
+    WHERE sr.job_type = 'fte' AND sr.ctc_inr IS NOT NULL
+)
+SELECT
+    (SELECT count(DISTINCT company_id) FROM season_roles) AS companies,
+    (SELECT coalesce(sum(selected_count), 0) FROM season_roles WHERE job_type = 'fte') AS fte_offers,
+    (SELECT coalesce(sum(selected_count), 0) FROM season_roles WHERE job_type <> 'fte') AS intern_offers,
+    (SELECT max(ctc_inr) FROM fte_offers) AS highest_ctc_inr,
+    (SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY ctc_inr) FROM fte_offers)::bigint AS median_ctc_inr,
+    (SELECT round(avg(ctc_inr)) FROM fte_offers)::bigint AS average_ctc_inr
+""")
+
+
+async def season_stats(session: AsyncSession, season_id: int) -> dict:
+    row = (await session.execute(SEASON_STATS_SQL, {"season_id": season_id})).one()
+    return dict(row._mapping)

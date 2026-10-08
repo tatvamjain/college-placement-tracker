@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app import admin as admin_service
 from app import queries
 from app.db import get_session
-from app.schemas import CompanyIn, CompanyOut, DriveDetail, DriveIn, DrivePatch, UpdateIn, UpdateOut
+from app.schemas import CompanyIn, CompanyOut, DriveDetail, DriveIn, DrivePatch, UpdateIn, UpdateOut, RolePatch
 from app.security import Admin, require_admin
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -53,3 +53,13 @@ async def post_update(
     session: AsyncSession = Depends(get_session),
 ):
     return await admin_service.post_update(session, admin.user_id, drive_id, body)
+
+@router.patch("/roles/{role_id}", response_model=DriveDetail)
+async def patch_role(
+    role_id: int,
+    body: RolePatch,
+    admin: Admin = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+):
+    drive_id = await admin_service.patch_role(session, admin.user_id, role_id, body)
+    return await _fresh_drive(session, drive_id)

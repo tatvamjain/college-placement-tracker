@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-
+from app import cache
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -16,7 +16,7 @@ from app.models import (
     PlacementOutbox,
     Season,
 )
-from app.schemas import CompanyIn, DriveIn, DrivePatch, UpdateIn
+from app.schemas import CompanyIn, DriveIn, DrivePatch, UpdateIn, RolePatch
 
 
 class NotFound(Exception):
@@ -99,6 +99,7 @@ async def create_drive(session: AsyncSession, actor_id: uuid.UUID, data: DriveIn
         data.model_dump(mode="json"), event_type="DriveCreated",
     )
     await session.commit()
+    await cache.delete(cache.stats_key(season.label))
     return drive.id
 
 
@@ -112,12 +113,14 @@ async def patch_drive(
     if not updates:
         return
 
+    season = await session.get(Season, drive.season_id)
     changes = {}
     for field, new in updates.items():
         changes[field] = {"from": jsonable_encoder(getattr(drive, field)), "to": jsonable_encoder(new)}
         setattr(drive, field, new)
     _record(session, actor_id, "update", "drive", drive.id, changes, event_type="DriveUpdated")
     await session.commit()
+    await cache.delete(cache.stats_key(season.label))
 
 
 async def post_update(
@@ -135,3 +138,24 @@ async def post_update(
     await session.commit()
     await session.refresh(update)
     return update
+
+async def patch_role(
+    session: AsyncSession, actor_id: uuid.UUID, role_id: int, data: RolePatch
+) -> int:
+    role = await session.get(DriveRole, role_id)
+    if role is None:
+        raise NotFound("Role not found")
+    drive = await session.get(Drive, role.drive_id)
+    updates = data.model_dump(exclude_unset=True)
+    if not updates:
+        return drive.id
+
+    season = await session.get(Season, drive.season_id)
+    changes = {}
+    for field, new in updates.items():
+        changes[field] = {"from": getattr(role, field), "to": new}
+        setattr(role, field, new)
+    _record(session, actor_id, "update", "drive_role", role.id, changes, event_type="RoleUpdated")
+    await session.commit()
+    await cache.delete(cache.stats_key(season.label))
+    return drive.id

@@ -12,7 +12,9 @@ class Settings(BaseSettings):
 
     jwt_public_key_path: str = "../../secrets/jwt_public.pem"
     jwt_issuer: str = "auth-service"
-    
+    redis_host: str = "localhost"
+    redis_port: int = 6379
+    redis_password: str
     @property
     def database_url(self) -> str:
         return (

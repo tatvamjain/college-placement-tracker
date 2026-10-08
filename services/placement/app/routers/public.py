@@ -1,13 +1,13 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from app import cache
 from app import queries
 from app.db import get_session
-from app.schemas import DriveDetail, SeasonDrives, SeasonOut, TodayOut
-
+from app.schemas import DriveDetail, SeasonDrives, SeasonOut, TodayOut, SeasonStats
+from app.models import SeasonStatus
 router = APIRouter(tags=["public"])
 IST = ZoneInfo("Asia/Kolkata")
 
@@ -48,3 +48,26 @@ async def today(session: AsyncSession = Depends(get_session)):
     day = datetime.now(IST).date()
     rows = await queries.rounds_on(session, day)
     return {"day": day, "rounds": [dict(r._mapping) for r in rows]}
+
+@router.get("/seasons/{label}/stats", response_model=SeasonStats)
+async def season_stats(
+    label: str, response: Response, session: AsyncSession = Depends(get_session)
+):
+    key = cache.stats_key(label)
+    cached = await cache.get_json(key)
+    if cached is not None:
+        response.headers["X-Cache"] = "HIT"
+        return cached
+
+    season = await queries.get_season(session, label)
+    if season is None:
+        raise HTTPException(status_code=404, detail="Season not found")
+    stats = {"season": season.label, **await queries.season_stats(session, season.id)}
+    ttl = (
+        cache.ACTIVE_TTL_SECONDS
+        if season.status == SeasonStatus.active
+        else cache.ARCHIVED_TTL_SECONDS
+    )
+    await cache.set_json(key, stats, ttl)
+    response.headers["X-Cache"] = "MISS"
+    return stats
