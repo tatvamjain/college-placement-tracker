@@ -73,12 +73,12 @@ fte_offers AS (
     SELECT sr.ctc_inr
     FROM season_roles sr
     CROSS JOIN LATERAL generate_series(1, sr.selected_count)
-    WHERE sr.job_type = 'fte' AND sr.ctc_inr IS NOT NULL
+    WHERE sr.job_type IN ('fte', 'intern_fte') AND sr.ctc_inr IS NOT NULL
 )
 SELECT
     (SELECT count(DISTINCT company_id) FROM season_roles) AS companies,
-    (SELECT coalesce(sum(selected_count), 0) FROM season_roles WHERE job_type = 'fte') AS fte_offers,
-    (SELECT coalesce(sum(selected_count), 0) FROM season_roles WHERE job_type <> 'fte') AS intern_offers,
+    (SELECT coalesce(sum(selected_count), 0) FROM season_roles WHERE job_type IN ('fte', 'intern_fte')) AS fte_offers,
+    (SELECT coalesce(sum(selected_count), 0) FROM season_roles WHERE job_type NOT IN ('fte', 'intern_fte')) AS intern_offers,
     (SELECT max(ctc_inr) FROM fte_offers) AS highest_ctc_inr,
     (SELECT percentile_cont(0.5) WITHIN GROUP (ORDER BY ctc_inr) FROM fte_offers)::bigint AS median_ctc_inr,
     (SELECT round(avg(ctc_inr)) FROM fte_offers)::bigint AS average_ctc_inr

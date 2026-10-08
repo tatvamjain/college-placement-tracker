@@ -86,6 +86,7 @@ async def create_drive(session: AsyncSession, actor_id: uuid.UUID, data: DriveIn
         company_id=data.company_id,
         status=data.status,
         visit_date=data.visit_date,
+        details=data.details,
         created_by=actor_id,
         roles=[DriveRole(**r.model_dump()) for r in data.roles],
         rounds=[
@@ -156,6 +157,8 @@ async def patch_role(
     for field, new in updates.items():
         changes[field] = {"from": getattr(role, field), "to": new}
         setattr(role, field, new)
+    if role.base_inr is not None and role.ctc_inr is not None and role.base_inr > role.ctc_inr:
+        raise Conflict("Base salary can't be more than the CTC")
     _record(session, actor_id, "update", "drive_role", role.id, changes, event_type="RoleUpdated")
     await session.commit()
     await cache.delete(cache.stats_key(season.label))
@@ -178,8 +181,10 @@ async def patch_round(
         setattr(rnd, field, new)
     _record(session, actor_id, "update", "round", rnd.id, changes)
     await session.commit()
+    
 from sqlalchemy import delete, select
 from sqlalchemy.orm import selectinload
+
 async def delete_drive(session: AsyncSession, actor_id: uuid.UUID, drive_id: int) -> None:
     drive = await session.scalar(
         select(Drive)
@@ -198,3 +203,4 @@ async def delete_drive(session: AsyncSession, actor_id: uuid.UUID, drive_id: int
     await session.execute(delete(Drive).where(Drive.id == drive_id))
     _record(session, actor_id, "delete", "drive", drive_id, snapshot)
     await session.commit()
+    await cache.delete(cache.stats_key(snapshot["season"]))

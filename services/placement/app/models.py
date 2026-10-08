@@ -43,6 +43,7 @@ class JobType(str, enum.Enum):
     fte = "fte"
     intern = "intern"
     intern_ppo = "intern_ppo"
+    intern_fte = "intern_fte"
 
 
 class RoundType(str, enum.Enum):
@@ -107,6 +108,7 @@ class Drive(Base):
     )
     visit_date: Mapped[date | None] = mapped_column(Date)
     results_published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    details: Mapped[str | None] = mapped_column(Text)
     created_by: Mapped[uuid.UUID]
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -136,6 +138,10 @@ class DriveRole(Base):
         CheckConstraint("ctc_inr >= 0", name="ctc_non_negative"),
         CheckConstraint("stipend_inr >= 0", name="stipend_non_negative"),
         CheckConstraint("selected_count >= 0", name="selected_non_negative"),
+        CheckConstraint("base_inr >= 0", name="base_non_negative"),
+        CheckConstraint(
+            "base_inr IS NULL OR ctc_inr IS NULL OR base_inr <= ctc_inr", name="base_within_ctc"
+        ),
     )
 
     id: Mapped[int] = mapped_column(Identity(), primary_key=True)
@@ -145,6 +151,7 @@ class DriveRole(Base):
     title: Mapped[str] = mapped_column(String(100))
     job_type: Mapped[JobType] = mapped_column(pg_enum(JobType, "job_type"))
     ctc_inr: Mapped[int | None] = mapped_column(BigInteger)
+    base_inr: Mapped[int | None] = mapped_column(BigInteger)
     stipend_inr: Mapped[int | None] = mapped_column(BigInteger)
     location: Mapped[str | None] = mapped_column(String(100))
     selected_count: Mapped[int] = mapped_column(default=0, server_default="0")

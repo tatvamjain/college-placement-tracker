@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, field_validator, Field
+from pydantic import BaseModel, ConfigDict, field_validator, Field, model_validator
 
 from app.models import DriveStatus, JobType, RoundStatus, RoundType, SeasonStatus
 
@@ -26,6 +26,7 @@ class RoleOut(ORMModel):
     title: str
     job_type: JobType
     ctc_inr: int | None
+    base_inr: int | None
     stipend_inr: int | None
     location: str | None
     selected_count: int
@@ -55,6 +56,7 @@ class DriveSummary(ORMModel):
 class DriveDetail(DriveSummary):
     season: SeasonOut
     results_published_at: datetime | None
+    details: str | None
     rounds: list[RoundOut]
     updates: list[UpdateOut]
 
@@ -86,9 +88,15 @@ class RoleIn(BaseModel):
     title: str = Field(min_length=1, max_length=100)
     job_type: JobType
     ctc_inr: int | None = Field(default=None, ge=0)
+    base_inr: int | None = Field(default=None, ge=0)
     stipend_inr: int | None = Field(default=None, ge=0)
     location: str | None = Field(default=None, max_length=100)
-    selected_count: int = Field(default=0, ge=0)
+
+    @model_validator(mode="after")
+    def base_within_ctc(self) -> "RoleIn":
+        if self.base_inr is not None and self.ctc_inr is not None and self.base_inr > self.ctc_inr:
+            raise ValueError("base salary can't be more than the CTC")
+        return self
 
 
 class RoundIn(BaseModel):
@@ -100,6 +108,7 @@ class DriveIn(BaseModel):
     season_label: str
     company_id: int
     visit_date: date | None = None
+    details: str | None = Field(default=None, max_length=2000)
     roles: list[RoleIn] = Field(min_length=1)
     rounds: list[RoundIn] = []
     status: DriveStatus = DriveStatus.announced
@@ -108,7 +117,7 @@ class DriveIn(BaseModel):
 class DrivePatch(BaseModel):
     status: DriveStatus | None = None
     visit_date: date | None = None
-
+    details: str | None = Field(default=None, max_length=2000)
     @field_validator("status")
     @classmethod
     def status_not_null(cls, v: DriveStatus | None) -> DriveStatus:
@@ -133,7 +142,7 @@ class SeasonStats(BaseModel):
 class RolePatch(BaseModel):
     selected_count: int | None = Field(default=None, ge=0)
     ctc_inr: int | None = Field(default=None, ge=0)
-
+    base_inr: int | None = Field(default=None, ge=0)
     @field_validator("selected_count")
     @classmethod
     def selected_not_null(cls, v: int | None) -> int:
