@@ -19,11 +19,13 @@ x-placement-env: &placement-env
 
 services:
   postgres:
+    ports: !reset []
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h localhost"]
       interval: 3s
       retries: 20
-
+  redis:
+    ports: !reset []
   auth-migrate:
     <<: *python
     build: ./services/auth
