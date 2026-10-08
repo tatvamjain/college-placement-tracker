@@ -1,0 +1,10 @@
+name: scaler
+values:
+  - key: token2
+    value: ''
+  - key: token3
+    value: ''
+  - key: token4
+    value: ''
+  - key: token1
+    value: ''
