@@ -1,7 +1,7 @@
 from sqlalchemy import MetaData
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
-
+from collections.abc import AsyncIterator
 from app.config import settings
 
 NAMING_CONVENTION = {
@@ -23,3 +23,6 @@ engine = create_async_engine(settings.database_url, pool_pre_ping=True)
 # engine manages a connection pool: opening a database connection is slow, so a few are kept open and reused. pool_pre_ping checks a connection is still alive before using it.
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 # session local is a factory that creates unit of works that is sessions
+async def get_session() -> AsyncIterator[AsyncSession]:
+    async with SessionLocal() as session:
+        yield session

@@ -124,7 +124,9 @@ class Drive(Base):
         back_populates="drive", cascade="all, delete-orphan", order_by="DriveRound.round_order"
     )
     updates: Mapped[list["DriveUpdate"]] = relationship(
-        back_populates="drive", cascade="all, delete-orphan"
+        back_populates="drive",
+        cascade="all, delete-orphan",
+        order_by="DriveUpdate.posted_at.desc()",
     )
 
 
