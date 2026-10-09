@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { api } from "@/lib/api";
 import { formatLPA, lakhs } from "@/lib/format";
 import { allHeadlines } from "@/lib/headlines";
-import { fteOffers } from "@/lib/offers";
+import { ctcOffers } from "@/lib/offers";
 
 import { DepartureBoard } from "./DepartureBoard";
 import { Headlines } from "./Headlines";
@@ -44,7 +44,7 @@ export async function SeasonView({ label }: { label: string | null }) {
 
   const { season, drives } = data;
   const stats = await api.seasonStats(season.label);
-  const offers = fteOffers(drives);
+  const offers = ctcOffers(drives);
   const isLive = season.status === "active";
   const headlines = isLive ? await allHeadlines(data) : [];
 
@@ -114,13 +114,9 @@ export async function SeasonView({ label }: { label: string | null }) {
       <section className="section">
         <div className="section-head">
           <h2 className="section-title">How packages are spread</h2>
-          <span className="kicker">Full-time · per student</span>
+          <span className="kicker">Every offer with a CTC · per student</span>
         </div>
-        <OfferDistribution
-          offers={offers}
-          median={stats?.median_ctc_inr ?? null}
-          average={stats?.average_ctc_inr ?? null}
-        />
+        <OfferDistribution offers={offers} />
       </section>
 
       <section className="section">

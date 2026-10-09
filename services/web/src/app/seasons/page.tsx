@@ -29,7 +29,7 @@ async function SeasonList() {
               </div>
               <div>
                 <span className="kicker">Offers</span>
-                <b>{s?.fte_offers ?? 0}</b>
+                <b>{s?.ctc_offers ?? 0}</b>
               </div>
               <div>
                 <span className="kicker">Median</span>

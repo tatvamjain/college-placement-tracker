@@ -3765,3 +3765,23 @@ button.pager-num:hover {
   text-decoration-color: rgba(255, 90, 95, 0.6);
   color: var(--muted);
 }
+
+/* Intern + PPO offers: ring instead of a solid dot */
+.dist .dot.is-ppo {
+  fill: transparent;
+  stroke: var(--green);
+  stroke-width: 1.6;
+  opacity: 0.95;
+}
+
+.dist-stack.is-active .dot.is-ppo {
+  fill: var(--green-soft);
+}
+
+.dist-legend i.dist-key-ppo {
+  width: 9px;
+  height: 9px;
+  border: 1.6px solid var(--green);
+  border-radius: 50%;
+  vertical-align: -1px;
+}

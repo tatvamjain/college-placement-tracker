@@ -135,7 +135,7 @@ class UpdateIn(BaseModel):
 class SeasonStats(BaseModel):
     season: str
     companies: int
-    fte_offers: int
+    ctc_offers: int
     intern_offers: int
     highest_ctc_inr: int | None
     median_ctc_inr: int | None

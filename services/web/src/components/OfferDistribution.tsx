@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { lakhs } from "@/lib/format";
-import type { OfferGroup } from "@/lib/offers";
+import { type OfferGroup, offerStats } from "@/lib/offers";
 
 const PLOT_HEIGHT = 210;
 const AXIS_HEIGHT = 34;
@@ -27,15 +27,7 @@ function percentBelow(groups: OfferGroup[], total: number, inr: number) {
 // One dot per student placed, stacked by package. Hover or tap a column to see who
 // got that package; pick a company to light up its offers; drag the slider to see
 // where an offer would land.
-export function OfferDistribution({
-  offers,
-  median,
-  average,
-}: {
-  offers: OfferGroup[];
-  median: number | null;
-  average: number | null;
-}) {
+export function OfferDistribution({ offers }: { offers: OfferGroup[] }) {
   const wrap = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(860);
   const [active, setActive] = useState<number | null>(null);
@@ -51,6 +43,10 @@ export function OfferDistribution({
   }, []);
 
   const total = offers.reduce((n, g) => n + g.count, 0);
+  // Worked out from the dots themselves, so the lines always match what's drawn
+  // (the season stats above count full-time offers only).
+  const { median, average } = useMemo(() => offerStats(offers), [offers]);
+  const ppoCount = offers.reduce((n, g) => n + (g.jobType === "intern_ppo" ? g.count : 0), 0);
   const top = offers.length > 0 ? offers[offers.length - 1].ctc_inr : 0;
   const maxL = niceMax(top / 100_000 || 1);
 
@@ -84,7 +80,7 @@ export function OfferDistribution({
   if (total === 0) {
     return (
       <div className="dist dist-empty">
-        <p className="kicker">No full-time results yet</p>
+        <p className="kicker">No results with a CTC yet</p>
         <p style={{ marginTop: 8, color: "var(--muted)" }}>
           Every placed student becomes a dot here once results are published.
         </p>
@@ -118,7 +114,7 @@ export function OfferDistribution({
             height={height}
             viewBox={`0 0 ${width} ${height}`}
             role="img"
-            aria-label={`Distribution of ${total} full-time offers from ₹${lakhs(offers[0].ctc_inr)} to ₹${lakhs(top)} LPA`}
+            aria-label={`Distribution of ${total} offers from ₹${lakhs(offers[0].ctc_inr)} to ₹${lakhs(top)} LPA`}
           >
             {ticks.map((t) => (
               <g key={t}>
@@ -173,7 +169,7 @@ export function OfferDistribution({
                           cx={cx}
                           cy={baseline - r - 2 - i * step}
                           r={r}
-                          className={`dot${g.ctc_inr === top ? " top" : ""}${lit ? "" : " is-dim"}${company === g.company ? " is-picked" : ""}`}
+                          className={`dot${g.jobType === "intern_ppo" ? " is-ppo" : ""}${g.ctc_inr === top ? " top" : ""}${lit ? "" : " is-dim"}${company === g.company ? " is-picked" : ""}`}
                           style={{ animationDelay: `${Math.min(i * 14, 600) + (b.index % 7) * 20}ms` }}
                         />
                       );
@@ -234,6 +230,12 @@ export function OfferDistribution({
 
         <div className="dist-legend">
           <span>● ONE DOT = ONE STUDENT</span>
+          {ppoCount > 0 && (
+            <span>
+              <i className="dist-key-ppo" />
+              INTERN + PPO ({ppoCount})
+            </span>
+          )}
           <span>
             <i style={{ background: "var(--amber)" }} />
             HALF EARN LESS, HALF MORE
@@ -264,7 +266,8 @@ export function OfferDistribution({
                     <span>
                       <b>{g.company}</b>
                       <small>
-                        {g.role} · ₹{lakhs(g.ctc_inr)} LPA
+                        {g.role}
+                        {g.jobType === "intern_ppo" ? " (PPO)" : ""} · ₹{lakhs(g.ctc_inr)} LPA
                       </small>
                     </span>
                     <em>×{g.count}</em>
