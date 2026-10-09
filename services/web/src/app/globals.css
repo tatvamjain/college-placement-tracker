@@ -302,6 +302,15 @@ a {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .ticker {
+    overflow-x: auto;
+  }
+  .ticker-track {
+    animation: none;
+  }
+}
+
 /* ---------- split-flap text ---------- */
 
 .flaps {
