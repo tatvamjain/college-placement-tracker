@@ -11,7 +11,7 @@ import { OfferDistribution } from "./OfferDistribution";
 
 function caption(placed: number, median: number | null, average: number | null) {
   if (median === null) {
-    return <>No full-time results yet. The moment a company announces, the numbers show up here.</>;
+    return <>No results with a CTC yet. The moment a company announces, the numbers show up here.</>;
   }
   const skewed = average !== null && average > median * 1.25;
   return (
@@ -67,7 +67,11 @@ export async function SeasonView({ label }: { label: string | null }) {
               <span className="unit">LPA · MEDIAN</span>
             </div>
             <p className="hero-caption">
-              {caption(stats?.fte_offers ?? 0, stats?.median_ctc_inr ?? null, stats?.average_ctc_inr ?? null)}
+              {caption(
+                offers.reduce((n, g) => n + g.count, 0),
+                stats?.median_ctc_inr ?? null,
+                stats?.average_ctc_inr ?? null,
+              )}
             </p>
           </div>
         )}

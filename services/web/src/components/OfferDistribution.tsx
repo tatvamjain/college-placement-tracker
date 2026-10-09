@@ -43,8 +43,7 @@ export function OfferDistribution({ offers }: { offers: OfferGroup[] }) {
   }, []);
 
   const total = offers.reduce((n, g) => n + g.count, 0);
-  // Worked out from the dots themselves, so the lines always match what's drawn
-  // (the season stats above count full-time offers only).
+  // Worked out from the dots themselves, so the lines always match what's drawn.
   const { median, average } = useMemo(() => offerStats(offers), [offers]);
   const ppoCount = offers.reduce((n, g) => n + (g.jobType === "intern_ppo" ? g.count : 0), 0);
   const top = offers.length > 0 ? offers[offers.length - 1].ctc_inr : 0;
