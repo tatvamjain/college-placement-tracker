@@ -31,7 +31,8 @@ export type Round = {
   status: RoundStatus;
   shortlisted_count: number | null;
 };
-export type DriveUpdate = { message: string; posted_at: string };
+// id arrives once the placement service sends it (needed to delete an announcement).
+export type DriveUpdate = { id?: number; message: string; posted_at: string };
 
 export type DriveSummary = {
   id: number;

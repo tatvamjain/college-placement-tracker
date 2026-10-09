@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import type { Company, DriveDetail, DriveStatus, Role, Round, RoundStatus, RoundType } from "@/lib/api";
+import type { Company, DriveDetail, DriveStatus, DriveUpdate, Role, Round, RoundStatus, RoundType } from "@/lib/api";
 import { admin } from "@/lib/client";
 import {
   DRIVE_BOARD_STATUS,
@@ -382,6 +382,39 @@ function AddRole({ driveId, run }: { driveId: number; run: Run }) {
   );
 }
 
+function AnnouncementItem({ update, run }: { update: DriveUpdate; run: Run }) {
+  const [asking, setAsking] = useState(false);
+  const id = update.id;
+
+  return (
+    <li className={`log-item ed-ann${asking ? " is-asking" : ""}`}>
+      <div className="ed-ann-head">
+        <span className="log-time">{formatTimestamp(update.posted_at)}</span>
+        {id !== undefined && !asking && (
+          <button className="link-btn ed-remove ed-ann-del" onClick={() => setAsking(true)}>
+            Delete
+          </button>
+        )}
+      </div>
+      <p className="log-msg">{update.message}</p>
+      {asking && id !== undefined && (
+        <div className="ed-confirm">
+          <span>Delete this announcement? It disappears from the drive page and headlines.</span>
+          <button
+            className="btn btn-small btn-danger"
+            onClick={() => run("Announcement deleted", () => admin.deleteUpdate(id))}
+          >
+            DELETE
+          </button>
+          <button className="btn btn-small" onClick={() => setAsking(false)}>
+            KEEP
+          </button>
+        </div>
+      )}
+    </li>
+  );
+}
+
 function DeleteDrive({ drive, notify, onDeleted }: { drive: DriveDetail; notify: Notify; onDeleted: () => void }) {
   const [asking, setAsking] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -631,11 +664,8 @@ export function DriveEditor({
         </form>
         {drive.updates.length > 0 && (
           <ol className="log ed-log">
-            {drive.updates.slice(0, 5).map((u) => (
-              <li key={u.posted_at} className="log-item">
-                <span className="log-time">{formatTimestamp(u.posted_at)}</span>
-                <p className="log-msg">{u.message}</p>
-              </li>
+            {drive.updates.map((u) => (
+              <AnnouncementItem key={u.id ?? u.posted_at} update={u} run={run} />
             ))}
           </ol>
         )}

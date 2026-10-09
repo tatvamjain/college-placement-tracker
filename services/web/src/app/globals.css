@@ -3730,3 +3730,29 @@ button.pager-num:hover {
     width: 100%;
   }
 }
+
+/* ---------- delete announcement ---------- */
+
+.ed-ann-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ed-ann-del {
+  font-family: var(--font-board), monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  opacity: 0.75;
+}
+
+.ed-ann-del:hover {
+  opacity: 1;
+}
+
+.ed-ann.is-asking .log-msg {
+  text-decoration: line-through;
+  text-decoration-color: rgba(255, 90, 95, 0.6);
+  color: var(--muted);
+}
