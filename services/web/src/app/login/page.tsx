@@ -11,7 +11,7 @@ export default function LoginPage() {
           Sign <span>in</span>
         </h1>
         <p className="checkin-copy">
-          Sign in with your Thapar email. Admins go to the admin panel, where drives, rounds
+          Sign in with your college email. Admins go to the admin panel, where drives, rounds
           and results are updated.
         </p>
       </div>

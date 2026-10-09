@@ -47,7 +47,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <div className="shell">{children}</div>
         <footer className="site-footer">
           <div className="shell">
-            DATA FROM THE PLACEMENT CELL · PACKAGES IN LAKHS PER ANNUM · TIMES IN IST
+            THIS IS A STUDENT HELD WEBSITE · DATA MIGHT BE INACCURATE · PACKAGES IN LAKHS PER ANNUM · TIMES IN IST
           </div>
         </footer>
       </body>
