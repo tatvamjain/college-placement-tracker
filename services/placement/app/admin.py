@@ -291,3 +291,16 @@ async def delete_role(session: AsyncSession, actor_id: uuid.UUID, role_id: int) 
     await session.commit()
     await cache.delete(cache.stats_key(season.label))
     return drive.id
+
+async def delete_update(session: AsyncSession, actor_id: uuid.UUID, update_id: int) -> None:
+    update = await session.get(DriveUpdate, update_id)
+    if update is None:
+        raise NotFound("Announcement not found")
+    snapshot = {
+        "drive_id": update.drive_id,
+        "message": update.message,
+        "posted_at": jsonable_encoder(update.posted_at),
+    }
+    await session.delete(update)
+    _record(session, actor_id, "delete", "drive_update", update_id, snapshot)
+    await session.commit()

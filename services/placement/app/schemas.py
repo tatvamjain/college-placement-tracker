@@ -41,6 +41,7 @@ class RoundOut(ORMModel):
 
 
 class UpdateOut(ORMModel):
+    id:int
     message: str
     posted_at: datetime
 

@@ -135,3 +135,11 @@ async def delete_role(
 ):
     drive_id = await admin_service.delete_role(session, admin.user_id, role_id)
     return await _fresh_drive(session, drive_id)
+
+@router.delete("/updates/{update_id}", status_code=204)
+async def delete_update(
+    update_id: int,
+    admin: Admin = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+):
+    await admin_service.delete_update(session, admin.user_id, update_id)
