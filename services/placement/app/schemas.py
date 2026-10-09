@@ -118,11 +118,13 @@ class DrivePatch(BaseModel):
     status: DriveStatus | None = None
     visit_date: date | None = None
     details: str | None = Field(default=None, max_length=2000)
-    @field_validator("status")
+    company_id: int | None = None
+
+    @field_validator("status", "company_id")
     @classmethod
-    def status_not_null(cls, v: DriveStatus | None) -> DriveStatus:
+    def not_null(cls, v):
         if v is None:
-            raise ValueError("status cannot be null")
+            raise ValueError("cannot be null")
         return v
 
 
@@ -140,24 +142,31 @@ class SeasonStats(BaseModel):
 
 
 class RolePatch(BaseModel):
-    selected_count: int | None = Field(default=None, ge=0)
+    title: str | None = Field(default=None, min_length=1, max_length=100)
+    job_type: JobType | None = None
     ctc_inr: int | None = Field(default=None, ge=0)
     base_inr: int | None = Field(default=None, ge=0)
-    @field_validator("selected_count")
-    @classmethod
-    def selected_not_null(cls, v: int | None) -> int:
-        if v is None:
-            raise ValueError("selected_count cannot be null")
-        return v
+    stipend_inr: int | None = Field(default=None, ge=0)
+    location: str | None = Field(default=None, max_length=100)
+    selected_count: int | None = Field(default=None, ge=0)
 
+    @field_validator("title", "job_type", "selected_count")
+    @classmethod
+    def not_null(cls, v):
+        if v is None:
+            raise ValueError("cannot be null")
+        return v
+    
 class RoundPatch(BaseModel):
+    round_type: RoundType | None = None
     status: RoundStatus | None = None
     scheduled_on: date | None = None
     shortlisted_count: int | None = Field(default=None, ge=0)
 
-    @field_validator("status")
+    @field_validator("round_type", "status")
     @classmethod
-    def status_not_null(cls, v: RoundStatus | None) -> RoundStatus:
+    def not_null(cls, v):
         if v is None:
-            raise ValueError("status cannot be null")
+            raise ValueError("cannot be null")
         return v
+

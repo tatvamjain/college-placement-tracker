@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import type { DriveSummary } from "@/lib/api";
 import { formatDay, formatLPA, formatStipend } from "@/lib/format";
 import { selectedCount, topCtc } from "@/lib/offers";
 
 import { Flaps } from "./Flaps";
+import { Pager } from "./Pager";
 import { DriveStatusTag } from "./StatusTag";
+
+const PAGE_SIZE = 12;
 
 type Filter = "all" | "fte" | "intern" | "intern_fte" | "ongoing" | "upcoming" | "results" | "hold";
 
@@ -48,10 +51,20 @@ function matches(drive: DriveSummary, query: string): boolean {
 export function DepartureBoard({ drives }: { drives: DriveSummary[] }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [page, setPage] = useState(1);
+  const top = useRef<HTMLDivElement>(null);
 
   const active = FILTERS.find((f) => f.id === filter)!;
   const shown = drives.filter((d) => active.test(d) && matches(d, query.trim()));
   const counts = Object.fromEntries(FILTERS.map((f) => [f.id, drives.filter(f.test).length]));
+  const pages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
+  const current = Math.min(page, pages);
+  const pageRows = shown.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
+
+  function goTo(p: number) {
+    setPage(p);
+    top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   return (
     <>
@@ -66,7 +79,10 @@ export function DepartureBoard({ drives }: { drives: DriveSummary[] }) {
               type="search"
               placeholder="Search company, role or city"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
             />
           </label>
           <div className="chips" role="group" aria-label="Filter drives">
@@ -75,7 +91,10 @@ export function DepartureBoard({ drives }: { drives: DriveSummary[] }) {
                 key={f.id}
                 className={`chip${filter === f.id ? " is-on" : ""}${f.id === "ongoing" ? " chip-live" : ""}`}
                 aria-pressed={filter === f.id}
-                onClick={() => setFilter(f.id)}
+                onClick={() => {
+                  setFilter(f.id);
+                  setPage(1);
+                }}
               >
                 {f.label}
                 <span className="chip-count">{counts[f.id]}</span>
@@ -85,7 +104,7 @@ export function DepartureBoard({ drives }: { drives: DriveSummary[] }) {
         </div>
       )}
 
-      <div className="board">
+      <div className="board" ref={top}>
         <div className="board-head" aria-hidden>
           <span>DATE</span>
           <span>COMPANY</span>
@@ -110,6 +129,7 @@ export function DepartureBoard({ drives }: { drives: DriveSummary[] }) {
                 onClick={() => {
                   setQuery("");
                   setFilter("all");
+                  setPage(1);
                 }}
               >
                 Clear filters
@@ -117,7 +137,7 @@ export function DepartureBoard({ drives }: { drives: DriveSummary[] }) {
             </p>
           </div>
         ) : (
-          shown.map((drive, row) => {
+          pageRows.map((drive, row) => {
             const placed = selectedCount(drive);
             const day = drive.visit_date ? formatDay(drive.visit_date) : "TBA";
             const money = headline(drive);
@@ -149,6 +169,15 @@ export function DepartureBoard({ drives }: { drives: DriveSummary[] }) {
           })
         )}
       </div>
+
+      {pages > 1 && (
+        <div className="board-foot">
+          <span className="board-range">
+            {(current - 1) * PAGE_SIZE + 1}–{Math.min(current * PAGE_SIZE, shown.length)} of {shown.length} drives
+          </span>
+          <Pager page={current} pages={pages} label="Drive pages" onPage={goTo} />
+        </div>
+      )}
     </>
   );
 }

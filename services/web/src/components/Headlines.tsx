@@ -14,10 +14,12 @@ const KIND_LABEL: Record<Headline["kind"], string> = {
 export function Headlines({
   seasonLabel,
   items,
+  total,
   boarding,
 }: {
   seasonLabel: string;
   items: Headline[];
+  total: number;
   boarding: DriveSummary[];
 }) {
   const [lead, ...rest] = items;
@@ -82,6 +84,11 @@ export function Headlines({
               ))}
             </ol>
           )}
+          <Link href="/headlines" className="news-all">
+            <span>View all headlines</span>
+            <span className="news-all-count">{total}</span>
+            <span aria-hidden>→</span>
+          </Link>
         </>
       ) : (
         <div className="news-empty">

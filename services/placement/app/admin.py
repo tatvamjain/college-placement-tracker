@@ -16,7 +16,8 @@ from app.models import (
     PlacementOutbox,
     Season,
 )
-from app.schemas import CompanyIn, DriveIn, DrivePatch, UpdateIn, RolePatch, RoundPatch
+from sqlalchemy import delete, func, select
+from app.schemas import CompanyIn, DriveIn, DrivePatch, RoleIn, RolePatch, RoundIn, RoundPatch, UpdateIn
 from app.models import SeasonStatus, DriveRound, DriveUpdate
 
 class NotFound(Exception):
@@ -117,6 +118,8 @@ async def patch_drive(
 
     season = await session.get(Season, drive.season_id)
     changes = {}
+    if "company_id" in updates and await session.get(Company, updates["company_id"]) is None:
+        raise NotFound("Company not found")
     for field, new in updates.items():
         changes[field] = {"from": jsonable_encoder(getattr(drive, field)), "to": jsonable_encoder(new)}
         setattr(drive, field, new)
@@ -155,7 +158,7 @@ async def patch_role(
     season = await session.get(Season, drive.season_id)
     changes = {}
     for field, new in updates.items():
-        changes[field] = {"from": getattr(role, field), "to": new}
+        changes[field] = {"from": jsonable_encoder(getattr(role, field)), "to": jsonable_encoder(new)}
         setattr(role, field, new)
     if role.base_inr is not None and role.ctc_inr is not None and role.base_inr > role.ctc_inr:
         raise Conflict("Base salary can't be more than the CTC")
@@ -204,3 +207,87 @@ async def delete_drive(session: AsyncSession, actor_id: uuid.UUID, drive_id: int
     _record(session, actor_id, "delete", "drive", drive_id, snapshot)
     await session.commit()
     await cache.delete(cache.stats_key(snapshot["season"]))
+
+async def _lock_drive(session: AsyncSession, drive_id: int) -> Drive:
+    drive = await session.scalar(select(Drive).where(Drive.id == drive_id).with_for_update())
+    if drive is None:
+        raise NotFound("Drive not found")
+    return drive
+
+
+async def add_round(session: AsyncSession, actor_id: uuid.UUID, drive_id: int, data: RoundIn) -> None:
+    await _lock_drive(session, drive_id)
+    last = await session.scalar(select(func.max(DriveRound.round_order)).where(DriveRound.drive_id == drive_id))
+    rnd = DriveRound(
+        drive_id=drive_id,
+        round_order=(last or 0) + 1,
+        round_type=data.round_type,
+        scheduled_on=data.scheduled_on,
+    )
+    session.add(rnd)
+    await session.flush()
+    _record(session, actor_id, "create", "round", rnd.id, jsonable_encoder(data))
+    await session.commit()
+
+
+async def delete_round(session: AsyncSession, actor_id: uuid.UUID, drive_id: int, round_order: int) -> None:
+    await _lock_drive(session, drive_id)
+    rnd = await session.scalar(
+        select(DriveRound).where(DriveRound.drive_id == drive_id, DriveRound.round_order == round_order)
+    )
+    if rnd is None:
+        raise NotFound("Round not found")
+    snapshot = {
+        "round_order": rnd.round_order,
+        "round_type": jsonable_encoder(rnd.round_type),
+        "scheduled_on": jsonable_encoder(rnd.scheduled_on),
+    }
+    round_id = rnd.id
+    await session.execute(delete(DriveRound).where(DriveRound.id == round_id))
+
+    later = await session.scalars(
+        select(DriveRound)
+        .where(DriveRound.drive_id == drive_id, DriveRound.round_order > round_order)
+        .order_by(DriveRound.round_order)
+    )
+    for r in later.all():
+        r.round_order -= 1
+        await session.flush()  # one row at a time, lowest first: never two rounds with the same number
+
+    _record(session, actor_id, "delete", "round", round_id, snapshot)
+    await session.commit()
+
+
+async def add_role(session: AsyncSession, actor_id: uuid.UUID, drive_id: int, data: RoleIn) -> None:
+    drive = await session.get(Drive, drive_id)
+    if drive is None:
+        raise NotFound("Drive not found")
+    season = await session.get(Season, drive.season_id)
+    role = DriveRole(drive_id=drive_id, **data.model_dump())
+    session.add(role)
+    await session.flush()
+    _record(session, actor_id, "create", "drive_role", role.id, jsonable_encoder(data))
+    await session.commit()
+    await cache.delete(cache.stats_key(season.label))
+
+
+async def delete_role(session: AsyncSession, actor_id: uuid.UUID, role_id: int) -> int:
+    role = await session.get(DriveRole, role_id)
+    if role is None:
+        raise NotFound("Role not found")
+    drive = await _lock_drive(session, role.drive_id)
+    count = await session.scalar(select(func.count()).select_from(DriveRole).where(DriveRole.drive_id == drive.id))
+    if count <= 1:
+        raise Conflict("A drive needs at least one role. Delete the drive instead.")
+    season = await session.get(Season, drive.season_id)
+    snapshot = {
+        "title": role.title,
+        "job_type": jsonable_encoder(role.job_type),
+        "ctc_inr": role.ctc_inr,
+        "selected_count": role.selected_count,
+    }
+    await session.execute(delete(DriveRole).where(DriveRole.id == role_id))
+    _record(session, actor_id, "delete", "drive_role", role_id, snapshot)
+    await session.commit()
+    await cache.delete(cache.stats_key(season.label))
+    return drive.id

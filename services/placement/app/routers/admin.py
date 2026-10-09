@@ -5,6 +5,7 @@ from app import admin as admin_service
 from app import queries
 from app.db import get_session
 from app.schemas import CompanyIn, CompanyOut, DriveDetail, DriveIn, DrivePatch, UpdateIn, UpdateOut, RolePatch, RoundPatch
+from app.schemas import RoleIn, RoundIn
 from app.security import Admin, require_admin
 from sqlalchemy import select
 from app.models import Company, Drive, DriveRole
@@ -92,3 +93,45 @@ async def delete_drive(
     session: AsyncSession = Depends(get_session),
 ) -> None:
     await admin_service.delete_drive(session, admin.user_id, drive_id)
+
+@router.post("/drives/{drive_id}/rounds", response_model=DriveDetail, status_code=201)
+async def add_round(
+    drive_id: int,
+    body: RoundIn,
+    admin: Admin = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+):
+    await admin_service.add_round(session, admin.user_id, drive_id, body)
+    return await _fresh_drive(session, drive_id)
+
+
+@router.delete("/drives/{drive_id}/rounds/{round_order}", response_model=DriveDetail)
+async def delete_round(
+    drive_id: int,
+    round_order: int,
+    admin: Admin = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+):
+    await admin_service.delete_round(session, admin.user_id, drive_id, round_order)
+    return await _fresh_drive(session, drive_id)
+
+
+@router.post("/drives/{drive_id}/roles", response_model=DriveDetail, status_code=201)
+async def add_role(
+    drive_id: int,
+    body: RoleIn,
+    admin: Admin = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+):
+    await admin_service.add_role(session, admin.user_id, drive_id, body)
+    return await _fresh_drive(session, drive_id)
+
+
+@router.delete("/roles/{role_id}", response_model=DriveDetail)
+async def delete_role(
+    role_id: int,
+    admin: Admin = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+):
+    drive_id = await admin_service.delete_role(session, admin.user_id, role_id)
+    return await _fresh_drive(session, drive_id)

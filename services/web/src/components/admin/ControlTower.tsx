@@ -178,6 +178,7 @@ export function ControlTower() {
               <DriveEditor
                 key={selected}
                 id={selected}
+                companies={companies}
                 notify={notify}
                 onChanged={reload}
                 onDeleted={async () => {

@@ -101,15 +101,29 @@ export const admin = {
     roles: RoleDraft[];
     rounds: RoundDraft[];
   }) => request<DriveDetail>(`${PLACEMENT}/admin/drives`, json("POST", body)),
-  patchDrive: (id: number, body: { status?: DriveStatus; visit_date?: string | null; details?: string | null }) =>
-    request<unknown>(`${PLACEMENT}/admin/drives/${id}`, json("PATCH", body)),
+  patchDrive: (
+    id: number,
+    body: { status?: DriveStatus; visit_date?: string | null; details?: string | null; company_id?: number },
+  ) => request<unknown>(`${PLACEMENT}/admin/drives/${id}`, json("PATCH", body)),
   patchRound: (
     driveId: number,
     order: number,
-    body: { status?: RoundStatus; shortlisted_count?: number | null; scheduled_on?: string | null },
+    body: {
+      status?: RoundStatus;
+      round_type?: RoundType;
+      shortlisted_count?: number | null;
+      scheduled_on?: string | null;
+    },
   ) => request<unknown>(`${PLACEMENT}/admin/drives/${driveId}/rounds/${order}`, json("PATCH", body)),
-  patchRole: (id: number, body: { selected_count?: number; base_inr?: number | null }) =>
+  addRound: (driveId: number, body: RoundDraft) =>
+    request<unknown>(`${PLACEMENT}/admin/drives/${driveId}/rounds`, json("POST", body)),
+  deleteRound: (driveId: number, order: number) =>
+    request<unknown>(`${PLACEMENT}/admin/drives/${driveId}/rounds/${order}`, { method: "DELETE" }),
+  patchRole: (id: number, body: Partial<RoleDraft> & { selected_count?: number }) =>
     request<unknown>(`${PLACEMENT}/admin/roles/${id}`, json("PATCH", body)),
+  addRole: (driveId: number, body: RoleDraft) =>
+    request<unknown>(`${PLACEMENT}/admin/drives/${driveId}/roles`, json("POST", body)),
+  deleteRole: (id: number) => request<unknown>(`${PLACEMENT}/admin/roles/${id}`, { method: "DELETE" }),
   deleteDrive: (id: number) => request<void>(`${PLACEMENT}/admin/drives/${id}`, { method: "DELETE" }),
   postUpdate: (driveId: number, message: string) =>
     request<unknown>(`${PLACEMENT}/admin/drives/${driveId}/updates`, json("POST", { message })),

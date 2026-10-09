@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 
 import { api } from "@/lib/api";
 import { formatLPA, lakhs } from "@/lib/format";
-import { seasonHeadlines } from "@/lib/headlines";
+import { allHeadlines } from "@/lib/headlines";
 import { fteOffers } from "@/lib/offers";
 
 import { DepartureBoard } from "./DepartureBoard";
@@ -46,7 +46,7 @@ export async function SeasonView({ label }: { label: string | null }) {
   const stats = await api.seasonStats(season.label);
   const offers = fteOffers(drives);
   const isLive = season.status === "active";
-  const headlines = isLive ? await seasonHeadlines(data) : [];
+  const headlines = isLive ? await allHeadlines(data) : [];
 
   return (
     <>
@@ -54,7 +54,8 @@ export async function SeasonView({ label }: { label: string | null }) {
         {isLive ? (
           <Headlines
             seasonLabel={season.label}
-            items={headlines}
+            items={headlines.slice(0, 6)}
+            total={headlines.length}
             boarding={drives.filter((d) => d.status === "ongoing")}
           />
         ) : (

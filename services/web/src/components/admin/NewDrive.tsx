@@ -2,30 +2,17 @@
 
 import { useState } from "react";
 
-import type { Company, JobType, RoundType } from "@/lib/api";
-import { admin, ApiError, type RoleDraft } from "@/lib/client";
-import { JOB_TYPE_LABELS, ROUND_NAMES } from "@/lib/format";
+import type { Company, RoundType } from "@/lib/api";
+import { admin, ApiError } from "@/lib/client";
+import { ROUND_NAMES } from "@/lib/format";
 
 import type { Notify } from "./ControlTower";
+import { blankRole, RoleFields, type RoleForm, roleValid, toDraft } from "./RoleFields";
 
-type RoleForm = { title: string; job_type: JobType; lpa: string; base: string; stipend: string; location: string };
 type RoundForm = { round_type: RoundType; scheduled_on: string };
 
-const blankRole = (): RoleForm => ({ title: "", job_type: "fte", lpa: "", base: "", stipend: "", location: "" });
 const MAX_DETAILS = 2000;
-const JOB_TYPES = Object.keys(JOB_TYPE_LABELS) as JobType[];
 const ROUND_TYPES = Object.keys(ROUND_NAMES) as RoundType[];
-
-function toDraft(r: RoleForm): RoleDraft {
-  return {
-    title: r.title.trim(),
-    job_type: r.job_type,
-    ctc_inr: r.job_type === "intern" || r.lpa === "" ? null : Math.round(Number(r.lpa) * 100_000),
-    base_inr: r.job_type === "intern" || r.base === "" ? null : Math.round(Number(r.base) * 100_000),
-    stipend_inr: r.job_type === "fte" || r.stipend === "" ? null : Math.round(Number(r.stipend)),
-    location: r.location.trim() || null,
-  };
-}
 
 export function NewDrive({
   seasonLabel,
@@ -50,9 +37,7 @@ export function NewDrive({
   const [busy, setBusy] = useState(false);
 
   const isNew = companyId === "new";
-  const baseTooHigh = (r: RoleForm) => r.lpa !== "" && r.base !== "" && Number(r.base) > Number(r.lpa);
-  const valid =
-    (isNew ? newName.trim() : companyId) && roles.length > 0 && roles.every((r) => r.title.trim() && !baseTooHigh(r));
+  const valid = (isNew ? newName.trim() : companyId) && roles.length > 0 && roles.every(roleValid);
 
   const editRole = (i: number, patch: Partial<RoleForm>) =>
     setRoles((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
@@ -152,74 +137,7 @@ export function NewDrive({
         <h3 className="ed-title">Roles</h3>
         {roles.map((r, i) => (
           <div key={i} className="ed-repeat">
-            <div className="ed-grid">
-              <label className="ed-field ed-span">
-                <span>TITLE</span>
-                <input
-                  value={r.title}
-                  onChange={(e) => editRole(i, { title: e.target.value })}
-                  placeholder="e.g. Software Engineer"
-                />
-              </label>
-              <label className="ed-field">
-                <span>TYPE</span>
-                <select value={r.job_type} onChange={(e) => editRole(i, { job_type: e.target.value as JobType })}>
-                  {JOB_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {JOB_TYPE_LABELS[t]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="ed-field">
-                <span>LOCATION</span>
-                <input
-                  value={r.location}
-                  onChange={(e) => editRole(i, { location: e.target.value })}
-                  placeholder="e.g. Bengaluru"
-                />
-              </label>
-              {r.job_type !== "intern" && (
-                <label className="ed-field">
-                  <span>CTC (LPA)</span>
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.1"
-                    value={r.lpa}
-                    onChange={(e) => editRole(i, { lpa: e.target.value })}
-                    placeholder="e.g. 12.5"
-                  />
-                </label>
-              )}
-              {r.job_type !== "intern" && (
-                <label className="ed-field">
-                  <span>BASE SALARY (LPA)</span>
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.1"
-                    value={r.base}
-                    onChange={(e) => editRole(i, { base: e.target.value })}
-                    placeholder="e.g. 9"
-                  />
-                  {baseTooHigh(r) && <em className="ed-warn">Base can&apos;t be more than the CTC</em>}
-                </label>
-              )}
-              {r.job_type !== "fte" && (
-                <label className="ed-field">
-                  <span>STIPEND (₹/MONTH)</span>
-                  <input
-                    type="number"
-                    min={0}
-                    step="1000"
-                    value={r.stipend}
-                    onChange={(e) => editRole(i, { stipend: e.target.value })}
-                    placeholder="e.g. 80000"
-                  />
-                </label>
-              )}
-            </div>
+            <RoleFields value={r} onChange={(patch) => editRole(i, patch)} />
             {roles.length > 1 && (
               <button type="button" className="link-btn" onClick={() => setRoles((rs) => rs.filter((_, j) => j !== i))}>
                 Remove role

@@ -3,22 +3,23 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import type { DriveDetail, DriveStatus, Role, Round, RoundStatus } from "@/lib/api";
+import type { Company, DriveDetail, DriveStatus, Role, Round, RoundStatus, RoundType } from "@/lib/api";
 import { admin } from "@/lib/client";
 import {
   DRIVE_BOARD_STATUS,
   formatTimestamp,
   JOB_TYPE_LABELS,
   ROUND_BOARD_STATUS,
-  ROUND_CODES,
   ROUND_NAMES,
   rolePay,
 } from "@/lib/format";
 
 import type { Notify } from "./ControlTower";
+import { blankRole, RoleFields, type RoleForm, roleToForm, roleValid, toDraft } from "./RoleFields";
 
 const DRIVE_STATUSES: DriveStatus[] = ["announced", "ongoing", "completed", "cancelled"];
 const ROUND_STATUSES: RoundStatus[] = ["scheduled", "ongoing", "completed"];
+const ROUND_TYPES = Object.keys(ROUND_NAMES) as RoundType[];
 const MAX_UPDATE = 2000;
 
 function Segmented<T extends string>({
@@ -66,71 +67,185 @@ const ROUND_TONES: Record<RoundStatus, string> = {
 
 type Run = (done: string, fn: () => Promise<unknown>) => Promise<boolean>;
 
+function RoundTypeSelect({
+  value,
+  onChange,
+  label,
+}: {
+  value: RoundType;
+  onChange: (t: RoundType) => void;
+  label: string;
+}) {
+  return (
+    <select
+      className="ed-select"
+      aria-label={label}
+      value={value}
+      onChange={(e) => onChange(e.target.value as RoundType)}
+    >
+      {ROUND_TYPES.map((t) => (
+        <option key={t} value={t}>
+          {ROUND_NAMES[t]}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 function RoundRow({ driveId, round, run }: { driveId: number; round: Round; run: Run }) {
+  const [type, setType] = useState(round.round_type);
   const [day, setDay] = useState(round.scheduled_on ?? "");
   const [shortlisted, setShortlisted] = useState(round.shortlisted_count?.toString() ?? "");
-  const dirty = day !== (round.scheduled_on ?? "") || shortlisted !== (round.shortlisted_count?.toString() ?? "");
+  const [removing, setRemoving] = useState(false);
+  const n = round.round_order;
+  const dirty =
+    type !== round.round_type ||
+    day !== (round.scheduled_on ?? "") ||
+    shortlisted !== (round.shortlisted_count?.toString() ?? "");
+
+  function save() {
+    const body: Parameters<typeof admin.patchRound>[2] = {
+      scheduled_on: day || null,
+      shortlisted_count: shortlisted === "" ? null : Number(shortlisted),
+    };
+    if (type !== round.round_type) body.round_type = type;
+    return run(`Round ${n} saved`, () => admin.patchRound(driveId, n, body));
+  }
 
   return (
-    <div className="ed-round">
-      <span className="ed-gate">R{round.round_order}</span>
-      <div className="ed-round-name">
-        {ROUND_NAMES[round.round_type]}
-        <small>{ROUND_CODES[round.round_type]}</small>
-      </div>
-      <Segmented
-        label={`Round ${round.round_order} status`}
-        value={round.status}
-        options={ROUND_STATUSES.map((s) => ({ value: s, label: ROUND_BOARD_STATUS[s], tone: ROUND_TONES[s] }))}
-        onChange={(status) =>
-          run(`Round ${round.round_order} is now ${ROUND_BOARD_STATUS[status]}`, () =>
-            admin.patchRound(driveId, round.round_order, { status }),
-          )
-        }
-      />
-      <label className="ed-mini">
-        <span>DATE</span>
-        <input type="date" value={day} onChange={(e) => setDay(e.target.value)} />
-      </label>
-      <label className="ed-mini">
-        <span>SHORTLISTED</span>
-        <input
-          type="number"
-          min={0}
-          inputMode="numeric"
-          placeholder="—"
-          value={shortlisted}
-          onChange={(e) => setShortlisted(e.target.value)}
+    <div className={`ed-rnd${removing ? " is-removing" : ""}`}>
+      <div className="ed-rnd-top">
+        <span className="ed-gate">R{n}</span>
+        <RoundTypeSelect label={`Round ${n} type`} value={type} onChange={setType} />
+        <Segmented
+          label={`Round ${n} status`}
+          value={round.status}
+          options={ROUND_STATUSES.map((s) => ({ value: s, label: ROUND_BOARD_STATUS[s], tone: ROUND_TONES[s] }))}
+          onChange={(status) =>
+            run(`Round ${n} is now ${ROUND_BOARD_STATUS[status]}`, () => admin.patchRound(driveId, n, { status }))
+          }
         />
-      </label>
-      <button
-        className="btn btn-small"
-        disabled={!dirty}
-        onClick={() =>
-          run(`Round ${round.round_order} saved`, () =>
-            admin.patchRound(driveId, round.round_order, {
-              scheduled_on: day || null,
-              shortlisted_count: shortlisted === "" ? null : Number(shortlisted),
-            }),
-          )
-        }
-      >
-        SAVE
+        <button
+          className="ed-x"
+          aria-label={`Remove round ${n}`}
+          title="Remove round"
+          onClick={() => setRemoving(true)}
+        >
+          ✕
+        </button>
+      </div>
+      {removing ? (
+        <div className="ed-confirm">
+          <span>
+            Remove round {n} ({ROUND_NAMES[round.round_type]})? Later rounds move up one place.
+          </span>
+          <button
+            className="btn btn-small btn-danger"
+            onClick={() => run(`Round ${n} removed`, () => admin.deleteRound(driveId, n))}
+          >
+            REMOVE
+          </button>
+          <button className="btn btn-small" onClick={() => setRemoving(false)}>
+            KEEP
+          </button>
+        </div>
+      ) : (
+        <div className="ed-rnd-fields">
+          <label className="ed-mini">
+            <span>DATE</span>
+            <input type="date" value={day} onChange={(e) => setDay(e.target.value)} />
+          </label>
+          <label className="ed-mini">
+            <span>SHORTLISTED</span>
+            <input
+              type="number"
+              min={0}
+              inputMode="numeric"
+              placeholder="—"
+              value={shortlisted}
+              onChange={(e) => setShortlisted(e.target.value)}
+            />
+          </label>
+          <button className="btn btn-small" disabled={!dirty} onClick={save}>
+            SAVE
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AddRound({ driveId, next, run }: { driveId: number; next: number; run: Run }) {
+  const [open, setOpen] = useState(false);
+  const [type, setType] = useState<RoundType>(next === 1 ? "ppt" : "technical");
+  const [day, setDay] = useState("");
+
+  if (!open) {
+    return (
+      <button className="link-btn ed-add" onClick={() => setOpen(true)}>
+        + Add a round
       </button>
+    );
+  }
+  return (
+    <div className="ed-rnd ed-rnd-new">
+      <div className="ed-rnd-top">
+        <span className="ed-gate">R{next}</span>
+        <RoundTypeSelect label="New round type" value={type} onChange={setType} />
+        <label className="ed-mini">
+          <span>DATE</span>
+          <input type="date" value={day} onChange={(e) => setDay(e.target.value)} />
+        </label>
+      </div>
+      <div className="ed-rnd-fields">
+        <button
+          className="btn btn-small btn-solid"
+          onClick={async () => {
+            if (
+              await run(`Round ${next} added`, () =>
+                admin.addRound(driveId, { round_type: type, scheduled_on: day || null }),
+              )
+            ) {
+              setOpen(false);
+              setDay("");
+            }
+          }}
+        >
+          ADD ROUND
+        </button>
+        <button className="btn btn-small" onClick={() => setOpen(false)}>
+          CANCEL
+        </button>
+      </div>
     </div>
   );
 }
 
 const toLakhs = (inr: number | null) => (inr === null ? "" : String(inr / 100_000));
 
-function RoleRow({ role, run }: { role: Role; run: Run }) {
+// Only the fields the admin actually changed are sent, so an unchanged CTC never gets rewritten.
+function changedFields(role: Role, form: RoleForm) {
+  const next = toDraft(form);
+  const body: Partial<typeof next> = {};
+  (Object.keys(next) as (keyof typeof next)[]).forEach((k) => {
+    if (next[k] !== role[k]) Object.assign(body, { [k]: next[k] });
+  });
+  return body;
+}
+
+function RoleRow({ role, run, onlyRole }: { role: Role; run: Run; onlyRole: boolean }) {
   const [count, setCount] = useState(String(role.selected_count));
   const [base, setBase] = useState(toLakhs(role.base_inr));
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<RoleForm>(() => roleToForm(role));
+  const [removing, setRemoving] = useState(false);
   const hasCtc = role.ctc_inr !== null;
   const countDirty = count !== String(role.selected_count) && count !== "";
   const baseDirty = hasCtc && base !== toLakhs(role.base_inr);
   const baseTooHigh = base !== "" && role.ctc_inr !== null && Number(base) * 100_000 > role.ctc_inr;
   const pay = rolePay(role);
+  const changes = changedFields(role, form);
+  const formDirty = Object.keys(changes).length > 0;
 
   function save() {
     const body: { selected_count?: number; base_inr?: number | null } = {};
@@ -140,35 +255,129 @@ function RoleRow({ role, run }: { role: Role; run: Run }) {
   }
 
   return (
-    <div className="ed-role">
-      <div className="ed-role-name">
-        {role.title}
-        <small>
-          {[JOB_TYPE_LABELS[role.job_type], pay.main, ...pay.extra, role.location].filter(Boolean).join(" · ")}
-        </small>
-      </div>
-      {hasCtc && (
-        <label className="ed-mini">
-          <span>BASE (LPA)</span>
-          <input
-            type="number"
-            min={0}
-            step="0.1"
-            inputMode="decimal"
-            placeholder="—"
-            value={base}
-            onChange={(e) => setBase(e.target.value)}
-            aria-invalid={baseTooHigh}
-          />
+    <div className={`ed-role-wrap${editing ? " is-editing" : ""}`}>
+      <div className="ed-role">
+        <div className="ed-role-name">
+          {role.title}
+          <small>
+            {[JOB_TYPE_LABELS[role.job_type], pay.main, ...pay.extra, role.location].filter(Boolean).join(" · ")}
+          </small>
+          <button className="link-btn ed-edit-link" onClick={() => setEditing((v) => !v)} aria-expanded={editing}>
+            {editing ? "Close editor" : "Edit role"}
+          </button>
+        </div>
+        {hasCtc && (
+          <label className="ed-mini">
+            <span>BASE (LPA)</span>
+            <input
+              type="number"
+              min={0}
+              step="0.1"
+              inputMode="decimal"
+              placeholder="—"
+              value={base}
+              onChange={(e) => setBase(e.target.value)}
+              aria-invalid={baseTooHigh}
+            />
+          </label>
+        )}
+        <label className="ed-mini ed-placed">
+          <span>PLACED</span>
+          <input type="number" min={0} inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} />
         </label>
+        <button className="btn btn-small" disabled={(!countDirty && !baseDirty) || baseTooHigh} onClick={save}>
+          SAVE
+        </button>
+      </div>
+
+      {editing && (
+        <div className="ed-role-edit">
+          <RoleFields value={form} onChange={(patch) => setForm((f) => ({ ...f, ...patch }))} />
+          {removing ? (
+            <div className="ed-confirm">
+              <span>
+                Remove {role.title}
+                {role.selected_count > 0 ? ` and its ${role.selected_count} placed students` : ""} from this drive?
+              </span>
+              <button
+                className="btn btn-small btn-danger"
+                onClick={() => run(`${role.title} removed`, () => admin.deleteRole(role.id))}
+              >
+                REMOVE
+              </button>
+              <button className="btn btn-small" onClick={() => setRemoving(false)}>
+                KEEP
+              </button>
+            </div>
+          ) : (
+            <div className="ed-inline ed-between">
+              <button
+                className="link-btn ed-remove"
+                disabled={onlyRole}
+                title={onlyRole ? "A drive needs at least one role" : undefined}
+                onClick={() => setRemoving(true)}
+              >
+                Remove role
+              </button>
+              <span className="ed-inline">
+                <button
+                  className="btn btn-small"
+                  onClick={() => {
+                    setForm(roleToForm(role));
+                    setEditing(false);
+                  }}
+                >
+                  CANCEL
+                </button>
+                <button
+                  className="btn btn-small btn-solid"
+                  disabled={!formDirty || !roleValid(form)}
+                  onClick={() =>
+                    run(`${form.title.trim() || role.title} updated`, () => admin.patchRole(role.id, changes))
+                  }
+                >
+                  SAVE ROLE
+                </button>
+              </span>
+            </div>
+          )}
+        </div>
       )}
-      <label className="ed-mini ed-placed">
-        <span>PLACED</span>
-        <input type="number" min={0} inputMode="numeric" value={count} onChange={(e) => setCount(e.target.value)} />
-      </label>
-      <button className="btn btn-small" disabled={(!countDirty && !baseDirty) || baseTooHigh} onClick={save}>
-        SAVE
+    </div>
+  );
+}
+
+function AddRole({ driveId, run }: { driveId: number; run: Run }) {
+  const [form, setForm] = useState<RoleForm | null>(null);
+
+  if (!form) {
+    return (
+      <button className="link-btn ed-add" onClick={() => setForm(blankRole())}>
+        + Add a role
       </button>
+    );
+  }
+  return (
+    <div className="ed-role-edit ed-role-new">
+      <p className="ed-sub">New role</p>
+      <RoleFields value={form} onChange={(patch) => setForm((f) => f && { ...f, ...patch })} />
+      <div className="ed-inline ed-between">
+        <span />
+        <span className="ed-inline">
+          <button className="btn btn-small" onClick={() => setForm(null)}>
+            CANCEL
+          </button>
+          <button
+            className="btn btn-small btn-solid"
+            disabled={!roleValid(form)}
+            onClick={async () => {
+              if (await run(`${form.title.trim()} added`, () => admin.addRole(driveId, toDraft(form)))) setForm(null);
+            }}
+          >
+            ADD ROLE
+          </button>
+        </span>
+      </div>
     </div>
   );
 }
@@ -221,11 +430,13 @@ function DeleteDrive({ drive, notify, onDeleted }: { drive: DriveDetail; notify:
 
 export function DriveEditor({
   id,
+  companies,
   notify,
   onChanged,
   onDeleted,
 }: {
   id: number;
+  companies: Company[];
   notify: Notify;
   onChanged: () => void;
   onDeleted: () => void;
@@ -236,6 +447,7 @@ export function DriveEditor({
   const [visit, setVisit] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [details, setDetails] = useState<string | null>(null);
+  const [companyId, setCompanyId] = useState<string>("");
 
   const load = useCallback(
     () =>
@@ -243,6 +455,7 @@ export function DriveEditor({
         setDrive(d);
         setVisit(d.visit_date ?? "");
         setDetails(d.details ?? "");
+        setCompanyId(String(d.company.id));
         setVersion((v) => v + 1);
       }),
     [id],
@@ -291,7 +504,7 @@ export function DriveEditor({
       </header>
 
       <section className="ed-card">
-        <h3 className="ed-title">Drive status</h3>
+        <h3 className="ed-title">Drive</h3>
         <Segmented
           label="Drive status"
           value={drive.status}
@@ -308,6 +521,25 @@ export function DriveEditor({
           }
         />
         <p className="ed-help">{DRIVE_BOARD_STATUS[drive.status].hint}.</p>
+        <div className="ed-inline ed-wrap">
+          <label className="ed-mini ed-company-pick">
+            <span>COMPANY</span>
+            <select value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            className="btn btn-small"
+            disabled={companyId === String(drive.company.id) || busy}
+            onClick={() => run("Company changed", () => admin.patchDrive(drive.id, { company_id: Number(companyId) }))}
+          >
+            SAVE
+          </button>
+        </div>
         <div className="ed-inline">
           <label className="ed-mini">
             <span>VISIT DATE</span>
@@ -349,20 +581,25 @@ export function DriveEditor({
       <section className="ed-card">
         <h3 className="ed-title">Rounds</h3>
         {drive.rounds.length === 0 ? (
-          <p className="ed-help">No rounds were added to this drive.</p>
+          <p className="ed-help">No rounds yet. Add them in the order they happen.</p>
         ) : (
           drive.rounds.map((r) => (
             <RoundRow key={`${version}-${r.round_order}`} driveId={drive.id} round={r} run={run} />
           ))
         )}
+        <AddRound key={`add-${version}`} driveId={drive.id} next={drive.rounds.length + 1} run={run} />
       </section>
 
       <section className="ed-card">
-        <h3 className="ed-title">Results</h3>
-        <p className="ed-help">Publishing a count updates the season&apos;s offer stats straight away.</p>
+        <h3 className="ed-title">Roles &amp; results</h3>
+        <p className="ed-help">
+          Publishing a placed count updates the season&apos;s offer stats straight away. Use Edit role to fix the title,
+          type, package or location.
+        </p>
         {drive.roles.map((r) => (
-          <RoleRow key={`${version}-${r.id}`} role={r} run={run} />
+          <RoleRow key={`${version}-${r.id}`} role={r} run={run} onlyRole={drive.roles.length === 1} />
         ))}
+        <AddRole key={`add-${version}`} driveId={drive.id} run={run} />
       </section>
 
       <section className="ed-card">
