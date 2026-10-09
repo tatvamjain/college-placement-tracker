@@ -56,3 +56,10 @@ from app.models import UserRole
 
 class RoleRequest(BaseModel):
     role: UserRole
+
+class MeResponse(BaseModel):
+    user_id: str
+    pseudo_id: str
+    role: str
+    email: str
+    display_name: str

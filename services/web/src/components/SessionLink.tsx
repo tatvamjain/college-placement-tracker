@@ -25,15 +25,18 @@ export async function SessionLink() {
   const token = (await cookies()).get("access_token")?.value;
   const role = token ? roleFromToken(token) : null;
 
-  if (role === "admin") {
-    return (
-      <Link href="/admin" className="session-link is-crew">
-        ADMIN
+  if (!role) return <CheckInLink />;
+  return (
+    <span className="session-links">
+      {role === "admin" && (
+        <Link href="/admin" className="session-link is-crew">
+          ADMIN
+        </Link>
+      )}
+      <Link href="/profile" className="session-link is-in" aria-label="Your account">
+        <span className="session-dot" aria-hidden />
+        ACCOUNT
       </Link>
-    );
-  }
-  if (role) {
-    return <span className="session-link is-in">SIGNED IN</span>;
-  }
-  return <CheckInLink />;
+    </span>
+  );
 }

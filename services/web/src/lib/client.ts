@@ -64,7 +64,8 @@ const json = (method: string, body: unknown): RequestInit => ({
 
 // ---------- auth ----------
 
-export type Me = { user_id: string; pseudo_id: string; role: string };
+// email and display_name come from the database; older auth builds only sent the first three.
+export type Me = { user_id: string; pseudo_id: string; role: string; email?: string; display_name?: string };
 
 export const auth = {
   requestCode: (email: string) => request<{ message: string }>(`${AUTH}/otp/request`, json("POST", { email })),

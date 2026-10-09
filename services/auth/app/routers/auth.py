@@ -8,6 +8,13 @@ from app.schemas import (
     MessageResponse, OtpRequest, OtpVerify, RefreshRequest, RefreshResponse, TokenResponse,
 )
 from app.services import otp_service, refresh_service, users
+import uuid
+
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+
+from app.models import User
+from app.schemas import MeResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -62,14 +69,22 @@ async def verify_otp(
     )
 
 
-@router.get("/me")
-async def me(claims: dict = Depends(get_current_claims)) -> dict:
-    return {
-        "user_id": claims["sub"],
-        "pseudo_id": claims["pid"],
-        "role": claims["role"],
-    }
-
+@router.get("/me", response_model=MeResponse)
+async def me(
+    claims: dict = Depends(get_current_claims), session: AsyncSession = Depends(get_session)
+) -> MeResponse:
+    user = await session.scalar(
+        select(User).options(selectinload(User.pseudonym)).where(User.id == uuid.UUID(claims["sub"]))
+    )
+    if user is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Not authenticated")
+    return MeResponse(
+        user_id=claims["sub"],
+        pseudo_id=claims["pid"],
+        role=claims["role"],
+        email=user.email,
+        display_name=user.pseudonym.display_name,
+    )
 
 @router.post("/refresh", response_model=RefreshResponse)
 async def refresh(

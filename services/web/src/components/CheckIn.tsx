@@ -135,7 +135,7 @@ export function CheckIn() {
               autoComplete="email"
               autoCapitalize="none"
               spellCheck={false}
-              placeholder="thapar mail"
+              placeholder="rollno"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoFocus
